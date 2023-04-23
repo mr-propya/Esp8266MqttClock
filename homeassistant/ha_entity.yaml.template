@@ -1,0 +1,7 @@
+    - name: "#DEVICE_ID# Watch"
+      schema: json
+      state_topic: "#DEVICE_ID#/led/status/baseConfig/json"
+      command_topic: "#DEVICE_ID#/led/cmd/baseConfig/json"
+      brightness: true
+      color_mode: true
+      supported_color_modes: ["rgb"]

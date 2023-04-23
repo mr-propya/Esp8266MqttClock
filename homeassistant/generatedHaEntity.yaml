@@ -1,0 +1,30 @@
+mqtt:
+  light:
+    - name: "Chinu Watch"
+      schema: json
+      state_topic: "Chinu/led/status/baseConfig/json"
+      command_topic: "Chinu/led/cmd/baseConfig/json"
+      brightness: true
+      color_mode: true
+      supported_color_modes: ["rgb"]
+    - name: "Propya Watch"
+      schema: json
+      state_topic: "Propya/led/status/baseConfig/json"
+      command_topic: "Propya/led/cmd/baseConfig/json"
+      brightness: true
+      color_mode: true
+      supported_color_modes: ["rgb"]
+    - name: "Test Watch"
+      schema: json
+      state_topic: "Test/led/status/baseConfig/json"
+      command_topic: "Test/led/cmd/baseConfig/json"
+      brightness: true
+      color_mode: true
+      supported_color_modes: ["rgb"]
+    - name: "TestDevice Watch"
+      schema: json
+      state_topic: "TestDevice/led/status/baseConfig/json"
+      command_topic: "TestDevice/led/cmd/baseConfig/json"
+      brightness: true
+      color_mode: true
+      supported_color_modes: ["rgb"]
