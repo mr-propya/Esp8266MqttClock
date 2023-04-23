@@ -1,0 +1,594 @@
+#include <Arduino.h>
+#include <LittleFS.h>
+#include "../.pio/libdeps/nodemcuv2/WiFiManager/WiFiManager.h"
+#include "../.pio/libdeps/nodemcuv2/NTPClient/NTPClient.h"
+#include <map>
+#include <string>
+#include <ESP8266WiFi.h>
+#include <EasyButton.h>
+#define BLYNK_PRINT Serial
+#define FASTLED_ALLOW_INTERRUPTS 0
+#define FASTLED_ESP8266_RAW_PIN_ORDER
+#include "../.pio/libdeps/nodemcuv2/Blynk/src/BlynkSimpleEsp8266.h"
+#include "../.pio/libdeps/nodemcuv2/FastLED/src/FastLED.h"
+#include <WiFiUdp.h>
+#include <stack>
+#include <ESP8266HTTPClient.h>
+
+#define LED_SIGNAL_PIN 12  //D7
+
+#define LED_PER_DIGIT_SEGMENT 7
+#define SEGMENTS_PER_DIGIT 7
+#define LED_PER_DOT_SEGMENT 3
+#define POSITION_DOT_SEGMENT 4
+#define SEGMENTS_PER_DOT 2
+#define DOT_BLINK_INTERVAL 2
+
+#define BAUD_RATE 115200
+#define FILE_NAME "/data.txt"
+#define WIFI_SETUP_SSID "NodeMCU-Setup"
+#define WIFI_SETUP_PASSWORD "testSetup"
+#define HTTP_POLL_INTERVAL 5
+#define NTP_POLL_INTERVAL 5
+#define LED_TOTAL (LED_PER_DIGIT_SEGMENT*SEGMENTS_PER_DIGIT* 4 + SEGMENTS_PER_DOT*LED_PER_DOT_SEGMENT)
+#define LED_CHANNELS 4
+
+#define BLYNK_R_CHANEL V0
+#define BLYNK_G_CHANEL V1
+#define BLYNK_B_CHANEL V2
+#define BLYNK_BRIGHTNESS_CHANNEL V4
+
+#define PARAM_DEVICE_ID "Device_ID"
+#define PARAM_API_KEY "API_Key"
+#define PARAM_AM_PM "AM_PM"
+#define PARAM_RGB_VAL "RGB_VALUE"
+#define PARAM_BRIGHTNESS_VAL "BRIGHTNESS"
+
+#define HTTP_POLL_BASE_URL "https://us-central1-customwatch-f5c4a.cloudfunctions.net/getData"
+#define BLYNK_AUTH_TOKEN  "vvY8HRGuGoJn-CbNXTJ62a2_JcBZq6nZ"
+
+WiFiManager wifiManager;
+WiFiUDP ntpUDP;
+NTPClient timeClient(ntpUDP, "pool.ntp.org");
+
+CRGB LedArray[LED_TOTAL];
+
+int lastPollHttp = 0;
+int lastPollNtp = 0;
+int lastDisplayedTime = 0;
+int lastDotsUpdated = 0;
+int brightness = 128;
+bool dotState = true;
+bool colourUpdated = false;
+
+int DIGIT_BITS_TO_BE_SET[] = {
+        63, 48, 109, 121, 114, 91, 95, 49, 255, 115, 0
+};
+
+int DEFAULT_RGB[LED_CHANNELS-1] = {10, 10, 10};
+int BLYNK_VALUES[LED_CHANNELS] = {};
+/*
+ *         1
+ *      ------
+ *     |      |
+ *   2 |   7  | 6
+ *      -------
+ *   3 |      | 5
+ *     |      |
+ *      -------
+ *          4
+ */
+
+
+
+std::string customInputNames[] = {
+        PARAM_DEVICE_ID,
+        PARAM_API_KEY,
+        PARAM_AM_PM,
+        PARAM_RGB_VAL,
+        PARAM_BRIGHTNESS_VAL
+};
+
+std::vector<WiFiManagerParameter*> customParamArray;
+
+char* cpyStr(char* s){
+    int l = strlen(s);
+    char *cpy = (char*)malloc(sizeof(char) * (l+1));
+    strcpy(cpy, s);
+    cpy[l] = '\0';
+    return cpy;
+}
+
+std::map<std::string, std::string> parseKeyValue(char* s, char* delimiter){
+    Serial.println("Parsing string");
+    Serial.println(s);
+    std::map<std::string, std::string> result;
+
+    if(std::string(s).find('=') < 0){
+        return result;
+    }
+
+    char *token = strtok(s, delimiter);
+    while (token != NULL)
+    {
+        std::string s(token);
+        int index = s.find('=');
+        std::string key = s.substr(0, index);
+
+        std::string val = s.substr(index+1, s.length());
+        Serial.write("2 Key is ");
+        Serial.write(key.c_str());
+
+        Serial.write("  2 Value is ");
+        Serial.write(val.c_str());
+        Serial.print("\n");
+        result[key] = val;
+        token = strtok(NULL, delimiter);
+    }
+    return result;
+}
+
+std::map<std::string, std::string> getKeyMap() {
+    std::map<std::string, std::string> result;
+    File file = LittleFS.open(FILE_NAME, "r");
+    if(!file){
+        Serial.write("File does not exists");
+        return result;
+    }
+
+    size_t size = file.size();
+    std::unique_ptr<char[]> buf(new char[size]);
+    file.readBytes(buf.get(), size);
+    file.close();
+    return parseKeyValue(buf.get(), "\n");
+}
+
+void storeKey(char* key, char* val){
+    std::map<std::string, std::string> existingVal = getKeyMap();
+
+    existingVal[key] = cpyStr(val);
+    Serial.print("New value added ");
+    Serial.println(existingVal[key].c_str());
+    File file = LittleFS.open(FILE_NAME, "w");
+    if(!file){
+        Serial.write("Fle not present while writing\n");
+    }
+    bool isFirst = true;
+    Serial.write("3 Writing key to file\n");
+    for (auto item: existingVal){
+        Serial.println("Writing key");
+        Serial.println(item.first.c_str());
+        Serial.println("Val");
+        Serial.println(item.second.c_str());
+        if(!isFirst){
+            file.print('\n');
+        }
+        isFirst = false;
+        file.print(item.first.c_str());
+        file.print('=');
+        file.print(item.second.c_str());
+    }
+    file.write('\0');
+    file.close();
+
+}
+
+
+void resetSettings(){
+    LittleFS.remove(FILE_NAME);
+    wifiManager.resetSettings();
+    ESP.reset();
+}
+
+void fetchRGBVal(){
+    char *rgbString = cpyStr(getKeyMap()[PARAM_RGB_VAL].data());
+    int brightnessLocal = atoi(getKeyMap()[PARAM_BRIGHTNESS_VAL].data());
+    brightness = brightnessLocal;
+    char* token = strtok(rgbString,",");
+    std::vector<int> rgbVector;
+    while (token != NULL){
+        Serial.print("Adding RGB ");
+        Serial.println(token);
+        rgbVector.push_back(atoi(token));
+        token = strtok(NULL,",");
+    }
+    if(rgbVector.size() != (LED_CHANNELS-1)){
+        resetSettings();
+        return;
+    }
+    std::copy(rgbVector.begin(), rgbVector.end(), DEFAULT_RGB);
+    BLYNK_VALUES[0]=brightness;
+    for(int i=1; i< LED_CHANNELS; i++){
+        Serial.print("Copying");
+        Serial.print(DEFAULT_RGB[i-1]);
+        BLYNK_VALUES[i] = DEFAULT_RGB[i-1];
+    }
+    Serial.println();
+}
+
+void saveConfigCallback(){
+    Serial.print("Saving config from device");
+    for (auto item: customParamArray){
+        Serial.print("Iter ");
+        Serial.print(item->getValue());
+        Serial.print("\n");
+        char *key, *val;
+        key = (char *)(malloc(sizeof(char) * 32));
+        val = (char *)(malloc(sizeof(char) * 32));
+        strcpy(key, item->getID());
+        strcpy(val, item->getValue());
+        key[String(item->getID()).length()] = '\0';
+        val[String(item->getValue()).length()] = '\0';
+
+        Serial.print("Storing Key and val 1 as ");
+        Serial.print(key);
+        Serial.print("   ");
+        Serial.print(val);
+        Serial.print("\n   ");
+        storeKey(key, val);
+        free(key);
+        free(val);
+    }
+    customParamArray.clear();
+    Serial.print("Out of write 4\n");
+}
+
+void initializeWifi(){
+    Serial.print("Initializing Wifi\n");
+
+    std::map<std::string, std::string> values = getKeyMap();
+    Serial.print("Checking vars\n");
+    for (auto item: customInputNames){
+        Serial.print("Checking vars\n");
+        if(values.count(item) == 0){
+            Serial.print("Resetting Wifi Since details not available \n");
+            resetSettings();
+            break;
+        }
+    }
+
+    for (const std::string& item: customInputNames){
+        auto* customParam = new WiFiManagerParameter(item.c_str() , item.c_str() , "", 40);
+        wifiManager.addParameter(customParam);
+        customParamArray.push_back(customParam);
+    }
+
+    wifiManager.setClass("invert");
+    wifiManager.setSaveConfigCallback(saveConfigCallback);
+    wifiManager.autoConnect(WIFI_SETUP_SSID, WIFI_SETUP_PASSWORD);
+
+    Serial.print("Out of setup 5");
+
+}
+
+bool initializationDone = false;
+
+int adjust12hrFormat(int hour){
+    Serial.println("Adjusting 12hr");
+    bool adjust = 12 == atoi(getKeyMap()[PARAM_AM_PM].c_str());
+    if(!adjust){
+        return hour;
+    }
+    if(hour > 12){
+        hour -=12;
+    }
+    return hour == 0 ? 12: hour;
+}
+
+void setLedGroupValue(int start, int val[LED_CHANNELS], int len){
+    int multiplyFactor = val[0];
+    for(int i=0; i<len; i++){
+        LedArray[i+start] = CRGB(val[1], val[2],val[3]);
+        if(multiplyFactor == 0){
+            LedArray[i+start]= CRGB::Black;
+        }
+    }
+}
+
+bool isFastLedInitialized = false;
+
+void updateFastLed(){
+    if(!isFastLedInitialized){
+        FastLED.addLeds<WS2812, D6, GRB>(LedArray, LED_TOTAL).setCorrection(TypicalLEDStrip);
+        isFastLedInitialized = true;
+    }
+    FastLED.setBrightness(brightness);
+    FastLED.show();
+}
+
+void setDigit(int numericVal, int digitNumber, bool offsetDots, int rgb[LED_CHANNELS -1]){
+//    Serial.println("Setting Digit");
+//    Serial.println(val);
+//    Serial.println(digitNumber);
+
+    int *lightsOn = (int*)malloc(sizeof(int) * LED_CHANNELS);
+    int *lightsOff = (int*)malloc(sizeof(int) * LED_CHANNELS);
+    for(int i=0; i < (LED_CHANNELS -1) ; i++){
+        lightsOff[i+1]=rgb[i];
+        lightsOn[i+1]=rgb[i];
+    }
+    lightsOff[0] = 0;
+    lightsOn[0] = 1;
+
+    int digitHead = digitNumber * SEGMENTS_PER_DIGIT * LED_PER_DIGIT_SEGMENT;
+    if(offsetDots){
+        digitHead += (SEGMENTS_PER_DOT * LED_PER_DOT_SEGMENT);
+    }
+
+    int binaryCode = numericVal * -1;
+    if(binaryCode <= 0){
+        binaryCode = DIGIT_BITS_TO_BE_SET[binaryCode*-1];
+    }
+//    Serial.println(binaryCode);
+
+    for(int i=0; i<SEGMENTS_PER_DIGIT; i++){
+        boolean isOn = (binaryCode >> i) & 1;
+        int* rgbVal = isOn ? lightsOn: lightsOff;
+        setLedGroupValue(digitHead, rgbVal, LED_PER_DIGIT_SEGMENT);
+        digitHead+=LED_PER_DIGIT_SEGMENT;
+    }
+
+    free(lightsOff);
+    free(lightsOn);
+
+    updateFastLed();
+}
+
+void setDotSegment(bool isOn, int segmentNumber, int rgb[LED_CHANNELS -1]){
+    int *rgbArr = (int*)malloc(sizeof(int) * LED_CHANNELS);
+    for(int i=0; i < (LED_CHANNELS -1) ; i++){
+        rgbArr[i+1]=rgb[i];
+    }
+    rgbArr[0] = isOn ? 1:0;
+    int segmentHead = POSITION_DOT_SEGMENT * SEGMENTS_PER_DIGIT * LED_PER_DIGIT_SEGMENT   + segmentNumber * LED_PER_DOT_SEGMENT;
+    Serial.print("Starting dot segment from ");
+    Serial.println(segmentHead);
+    setLedGroupValue(segmentHead, rgbArr, LED_PER_DOT_SEGMENT);
+    free(rgbArr);
+}
+
+void updateWatchFace(int displayTime){
+    Serial.println("Update watch face start");
+    bool updatedDotState = false;
+    if((millis() - lastDotsUpdated) > DOT_BLINK_INTERVAL * 1000){
+        updatedDotState = true;
+    }
+    if(!updatedDotState && displayTime == lastDisplayedTime && !colourUpdated){
+        return;
+    }
+    colourUpdated = false;
+    lastDisplayedTime = displayTime;
+    if(updatedDotState){
+        dotState= !dotState;
+    }
+
+    Serial.println("Updating clock face");
+
+    int time = displayTime;
+
+    Serial.println("Time in int");
+    Serial.println(time);
+
+    std::stack<int> digits;
+    bool scheduleRestart = false;
+    if(time % 1200 == 0) {
+        scheduleRestart = true;
+    }
+    while (time > 0){
+        digits.push(time%10);
+        time/=10;
+    }
+    while (digits.size() < 4){
+        digits.push(10);
+    }
+
+    int digitsSent = 0;
+
+    while (!digits.empty()){
+        Serial.print("Printing digit from stack ");
+        Serial.println(digits.top());
+        setDigit(digits.top(), digitsSent, digitsSent >= POSITION_DOT_SEGMENT, DEFAULT_RGB);
+        digits.pop();
+        digitsSent+=1;
+    }
+    for(int i=0; i< SEGMENTS_PER_DOT; i++){
+        setDotSegment(dotState, i, DEFAULT_RGB);
+    }
+    Serial.println("Done setting watch face");
+    updateFastLed();
+    if(scheduleRestart){
+        delay(1000*30);
+        ESP.restart();
+    }
+}
+
+int pollNtp(){
+    if((millis() - lastPollNtp) < NTP_POLL_INTERVAL * 1000 ){
+        return lastDisplayedTime;
+    }
+    lastPollNtp = millis();
+    Serial.print("Polling NTP");
+    timeClient.update();
+    Serial.println(timeClient.getFormattedTime());
+
+    int hours = adjust12hrFormat(timeClient.getHours());
+    int mins = timeClient.getMinutes();
+    int displayTime = hours*100 + mins;
+    return displayTime;
+}
+
+int* csvToInt(char* csv){
+    std::vector<int> data;
+    String token = strtok(NULL,",");
+    while (token != NULL){
+        data.push_back(atoi(token.c_str()));
+        token = strtok(NULL,",");
+    }
+    int* dataArr = (int*)malloc(sizeof(int) * (data.size() + 1));
+    dataArr[0] = data.size();
+    std::copy(data.begin(), data.end(), &dataArr[1]);
+    return dataArr;
+}
+
+HTTPClient http;
+WiFiClientSecure client;
+
+bool pollHttp(bool ignoreWait){
+    if( !ignoreWait && ((millis() - lastPollHttp) < HTTP_POLL_INTERVAL * 1000) ){
+        return false;
+    }
+    lastPollHttp = millis();
+    Serial.print("Polling HTTP");
+
+    String serverEndpoint = String(HTTP_POLL_BASE_URL) + "?deviceId=" + getKeyMap()[PARAM_DEVICE_ID].c_str();
+    Serial.println(serverEndpoint);
+    client.setInsecure();
+    http.begin(client, serverEndpoint);
+    int statusCode = http.GET();
+
+    Serial.println(http.getString());
+
+    if(statusCode / 100 != 2){
+        Serial.print("Error polling HTTP with error code ");
+        Serial.println(statusCode);
+        return false;
+    }
+    String payload = http.getString();
+    http.end();
+
+    char* data = (char*)malloc((payload.length() + 1) * sizeof(char));
+    payload.toCharArray(data, payload.length() + 1);
+
+    if(strcmp(data, "NO_DATA")==0){
+        free(data);
+        return false;
+    }
+
+    std::map<std::string, std::string> dataMap = parseKeyValue(data,"#");
+
+    int* digitValues = csvToInt(dataMap["DIGIT_VALUE"].data());
+    int* rgbVals = csvToInt(dataMap["RGB_VALUE"].data());
+    int* blinkValues = csvToInt(dataMap["BLINK_VALUES"].data());
+
+    int totalBlinkValue = blinkValues[0]/2;
+
+    for(int blink=0; blink< totalBlinkValue; blink++){
+        bool isOn = blinkValues[2*blink + 1] == 1;
+        for(int i=0; i <4; i++){
+            setDigit(isOn ? digitValues[i+1] * -1 : 10, i, i < POSITION_DOT_SEGMENT, &rgbVals[1]);
+        }
+        for(int i=0; i <2; i++){
+            setDotSegment((isOn && digitValues[i+1+4] ==1 ) , i,  &rgbVals[1]);
+        }
+        delay(blinkValues[2*blink + 2]);
+    }
+
+    free(digitValues);
+    free(rgbVals);
+    free(blinkValues);
+    free(data);
+    dataMap.clear();
+    return true;
+}
+
+
+void storeRGB(){
+    bool isValueChanged = BLYNK_VALUES[0] != brightness;
+    for(int i=1; i<LED_CHANNELS; i++){
+        if(BLYNK_VALUES[i] != DEFAULT_RGB[i-1]){
+            isValueChanged = true;
+        }
+    }
+    if(!isValueChanged){
+        return;
+    }
+
+    Serial.println("Blynk values updated, Storing");
+
+    String rgbString = "";
+    for(int i=1; i<LED_CHANNELS; i++){
+        rgbString.concat(BLYNK_VALUES[i]);
+        if(i!=(LED_CHANNELS-1)){
+            rgbString.concat(',');
+        }
+    }
+    int l = rgbString.length();
+    char rgbS[l];
+    strcpy(rgbS, rgbString.c_str());
+    storeKey(PARAM_RGB_VAL, rgbS);
+    char bright[4];
+    itoa(BLYNK_VALUES[0], bright, 10);
+    storeKey(PARAM_BRIGHTNESS_VAL, bright);
+    Serial.println("Values To Store");
+    Serial.println(rgbS);
+    Serial.println(bright);
+
+    fetchRGBVal();
+    colourUpdated = true;
+}
+
+EasyButton button(0);
+
+void playBuzzer(){
+
+}
+
+void setup() {
+    button.begin();
+    button.onPressed(resetSettings);
+    Serial.begin(BAUD_RATE);
+    LittleFS.begin();
+    pinMode(16,OUTPUT);
+
+    initializeWifi();
+    delay(500);
+    timeClient.begin();
+    timeClient.setTimeOffset(3600 * 5 + 1800);
+    initializationDone = true;
+    Blynk.begin(BLYNK_AUTH_TOKEN, wifiManager.getWiFiSSID().c_str(), wifiManager.getWiFiPass().c_str());
+    fetchRGBVal();
+    Serial.println("Setup done");
+}
+
+bool valueSetByHttp = false;
+void loop() {
+    button.read();
+    if(!initializationDone){
+        return;
+    }
+    valueSetByHttp = pollHttp(valueSetByHttp);
+    if(!valueSetByHttp){
+        Blynk.run();
+        storeRGB();
+        int displayTime = pollNtp();
+        updateWatchFace(displayTime);
+        delay(500);
+    }
+}
+
+
+BLYNK_WRITE(BLYNK_R_CHANEL)
+{
+    BLYNK_VALUES[1] = param.asInt();
+};
+
+
+BLYNK_WRITE(BLYNK_G_CHANEL)
+{
+    BLYNK_VALUES[2] = param.asInt();
+};
+
+
+
+BLYNK_WRITE(BLYNK_B_CHANEL)
+{
+    BLYNK_VALUES[3] = param.asInt();
+};
+
+
+
+BLYNK_WRITE(BLYNK_BRIGHTNESS_CHANNEL)
+{
+    BLYNK_VALUES[0] = param.asInt();
+};
+
