@@ -62,7 +62,6 @@ std::string customInputNames[] = {
         PARAM_AM_PM,
         PARAM_RGB_VAL,
         PARAM_BRIGHTNESS_VAL,
-        PARAM_SHOW_ZERO_VAL,
         PARAM_MIN_OFFSET_VAL
 };
 

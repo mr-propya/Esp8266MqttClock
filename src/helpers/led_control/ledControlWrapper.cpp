@@ -51,8 +51,8 @@ void LEDWrapper::loadSavedValues(){
         stateOnOff = 1;
     }
 
-    if(StorageWrapper::getStorageWrapper()->keyExists(PARAM_SHOW_ZERO_VAL)){
-        filler = StorageWrapper::getStorageWrapper()->getNumber(PARAM_SHOW_ZERO_VAL);
+    if(StorageWrapper::getStorageWrapper()->keyExists(CLOCK_UPDATE_PARAM_FILLER_DIGIT)){
+        filler = StorageWrapper::getStorageWrapper()->getNumber(CLOCK_UPDATE_PARAM_FILLER_DIGIT);
     } else {
         filler = 10;
     }
@@ -249,24 +249,30 @@ void LEDWrapper::printStat() {
 bool LEDWrapper::updateUsingJson(DynamicJsonDocument *doc) {
     bool hasUpdate = false;
     if(doc->containsKey(CLOCK_UPDATE_PARAM_STATE_KEY)){
-        char* updateState = (char*)(*doc)[CLOCK_UPDATE_PARAM_STATE_KEY];
-        setState(atoi(updateState));
+        const char* updateState = ((const char*)(*doc)[CLOCK_UPDATE_PARAM_STATE_KEY]);
+        setState(
+                strcmp(updateState, CLOCK_UPDATE_PARAM_STATE_ON) == 0 ? 1:0
+        );
         hasUpdate  = true;
     }
 
     if(doc->containsKey(CLOCK_UPDATE_PARAM_RGB)){
-        int r = atoi((const char*)(*doc)[CLOCK_UPDATE_PARAM_RGB_R]);
-        int g = atoi((const char*)(*doc)[CLOCK_UPDATE_PARAM_RGB_G]);
-        int b = atoi((const char*)(*doc)[CLOCK_UPDATE_PARAM_RGB_B]);
+        int r =(*doc)[CLOCK_UPDATE_PARAM_RGB_R];
+        int g = (*doc)[CLOCK_UPDATE_PARAM_RGB_G];
+        int b = (*doc)[CLOCK_UPDATE_PARAM_RGB_B];
         setRgb(
                 r, g, b
         );
         hasUpdate = true;
     }
 
-    if(doc->containsKey(CLOCK_UPDATE_PARAM_BRIGHTNESS)){
-        char* b = (char*)(*doc)[CLOCK_UPDATE_PARAM_BRIGHTNESS];
-        setBrightness(atoi(b));
+    if(doc->containsKey(CLOCK_UPDATE_PARAM_BRIGHTNESS)) {
+        setBrightness((*doc)[CLOCK_UPDATE_PARAM_BRIGHTNESS]);
+        hasUpdate = true;
+    }
+
+    if(doc->containsKey(CLOCK_UPDATE_PARAM_FILLER_DIGIT)){
+        timePadding((*doc)[CLOCK_UPDATE_PARAM_FILLER_DIGIT]);
         hasUpdate  = true;
     }
 
@@ -284,19 +290,20 @@ void LEDWrapper::publishState(bool forcePush) {
     if( !(needToPushMqttStat || forcePush) ){
         return;
     }
+
+    StaticJsonDocument<256> jsonDoc;
+    jsonDoc[CLOCK_UPDATE_PARAM_STATE_KEY] = stateOnOff == 1 ? CLOCK_UPDATE_PARAM_STATE_ON : CLOCK_UPDATE_PARAM_STATE_OFF;
+    jsonDoc[CLOCK_UPDATE_PARAM_BRIGHTNESS] = brightness;
+    jsonDoc[CLOCK_UPDATE_PARAM_FILLER_DIGIT] = filler;
+    JsonObject colorDoc = jsonDoc.createNestedObject(CLOCK_UPDATE_PARAM_RGB);
+    colorDoc[CLOCK_UPDATE_PARAM_RGB_R] = rgb[0];
+    colorDoc[CLOCK_UPDATE_PARAM_RGB_G] = rgb[1];
+    colorDoc[CLOCK_UPDATE_PARAM_RGB_B] = rgb[2];
+
+    int size = measureJson(jsonDoc);
     String jsonUpdate;
-    jsonUpdate.concat("{\"state\":");
-    jsonUpdate.concat(stateOnOff == 1 ? CLOCK_UPDATE_PARAM_STATE_ON : CLOCK_UPDATE_PARAM_STATE_OFF);
-    jsonUpdate.concat(",\"brightness\":");
-    jsonUpdate.concat(brightness);
-    jsonUpdate.concat(",\"color\":{");
-    jsonUpdate.concat("\"r\":");
-    jsonUpdate.concat(rgb[0]);
-    jsonUpdate.concat(",\"g\":");
-    jsonUpdate.concat(rgb[1]);
-    jsonUpdate.concat(",\"b\":");
-    jsonUpdate.concat(rgb[2]);
-    jsonUpdate.concat("}}");
+    serializeJson(jsonDoc, jsonUpdate);
+    jsonUpdate[size]= '\0';
 
     String topic;
     topic.concat(LED_CONTROL_MQTT_STAT);
@@ -305,6 +312,11 @@ void LEDWrapper::publishState(bool forcePush) {
     MqttClientWrapper *mqttClientWrapper = MqttClientWrapper::getMqttInstance();
     mqttClientWrapper->publish((char*)topic.c_str(), (char*)jsonUpdate.c_str(), false);
 
+}
+
+void LEDWrapper::timePadding(bool shouldAddPadding) {
+    filler = shouldAddPadding ? 0 : 10;
+    StorageWrapper::getStorageWrapper()->setKey(CLOCK_UPDATE_PARAM_FILLER_DIGIT, filler);
 }
 
 

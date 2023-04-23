@@ -16,6 +16,7 @@
 #define CLOCK_UPDATE_PARAM_RGB_G "g"
 #define CLOCK_UPDATE_PARAM_RGB_B "b"
 #define CLOCK_UPDATE_PARAM_BRIGHTNESS "brightness"
+#define CLOCK_UPDATE_PARAM_FILLER_DIGIT "filler_digit"
 #define CLOCK_UPDATE_PARAM_STATE_KEY "state"
 #define CLOCK_UPDATE_PARAM_STATE_ON "ON"
 #define CLOCK_UPDATE_PARAM_STATE_OFF "OFF"
@@ -55,6 +56,7 @@ private:
 public:
     void setBrightness(int b);
     void setState(int state);
+    void timePadding(bool shouldAddPadding);
     void setRgb(int r, int g, int b);
     void setDigit(int digit, int value, bool isNumber, int *rgb_l);
     void setDigit(int digit, int value, bool isNumber);
