@@ -79,9 +79,9 @@ void saveConfigCallback(){
     Serial.print("Saving config from device");
     for (auto item: customParamArray){
         storageWrapper->setKey((char*)item->getID(), (char*)item->getValue());
-        storageWrapper->printState();
         free(item);
     }
+    storageWrapper->flushBuffer();
     customParamArray.clear();
     storageWrapper->printState();
     Serial.print("Out of write 4\n");
@@ -142,6 +142,7 @@ void loop(){
     ledWrapper->setTime(time);
     ledWrapper->loop();
     alexaWrapper->loop();
+    storageWrapper->loop();
     if(DEBUG_ENABLED){
         ledWrapper->printStat();
         storageWrapper->printState();

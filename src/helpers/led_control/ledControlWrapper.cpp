@@ -260,25 +260,25 @@ bool LEDWrapper::updateUsingJson(DynamicJsonDocument *doc) {
     bool hasUpdate = false;
     if(doc->containsKey(CLOCK_UPDATE_PARAM_STATE_KEY)){
         const char* updateState = ((const char*)(*doc)[CLOCK_UPDATE_PARAM_STATE_KEY]);
+        hasUpdate  = true;
         setState(
                 strcmp(updateState, CLOCK_UPDATE_PARAM_STATE_ON) == 0 ? 1:0
         );
-        hasUpdate  = true;
     }
 
     if(doc->containsKey(CLOCK_UPDATE_PARAM_RGB)){
         int r = (*doc)[CLOCK_UPDATE_PARAM_RGB][CLOCK_UPDATE_PARAM_RGB_R];
         int g = (*doc)[CLOCK_UPDATE_PARAM_RGB][CLOCK_UPDATE_PARAM_RGB_G];
         int b = (*doc)[CLOCK_UPDATE_PARAM_RGB][CLOCK_UPDATE_PARAM_RGB_B];
+        hasUpdate = true;
         setRgb(
                 r, g, b
         );
-        hasUpdate = true;
     }
 
     if(doc->containsKey(CLOCK_UPDATE_PARAM_BRIGHTNESS)) {
-        setBrightness((*doc)[CLOCK_UPDATE_PARAM_BRIGHTNESS]);
         hasUpdate = true;
+        setBrightness((*doc)[CLOCK_UPDATE_PARAM_BRIGHTNESS]);
     }
 
     if(doc->containsKey(CLOCK_UPDATE_PARAM_FILLER_DIGIT)){

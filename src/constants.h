@@ -39,7 +39,7 @@
 
 // ----------- Storage Constants ----------- //
 #define STORAGE_FILE_NAME "/data.json"
-
+#define WAIT_FOR_CYCLES_FOR_COMMIT 100
 
 #define PARAM_DEVICE_ID "Device_ID"
 #define PARAM_API_KEY "API_Key"

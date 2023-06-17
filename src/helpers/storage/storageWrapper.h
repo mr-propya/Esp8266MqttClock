@@ -17,6 +17,10 @@ private:
     void writeCompleteContent();
     void writeRawStr(const char* s);
     StorageWrapper();
+    bool isDocModified;
+    int clockSinceLastModifiedCycle;
+    bool shouldFlush();
+    void markWriteToPersist();
 public:
     bool allFilesAvailable(char** data, int len);
     bool keyExists( char* key);
@@ -26,7 +30,9 @@ public:
     void setKey(char* key, int val);
     static StorageWrapper* getStorageWrapper();
     void reset();
+    void flushBuffer();
     void printState();
+    void loop();
 };
 
 

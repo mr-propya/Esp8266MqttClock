@@ -10,6 +10,7 @@
 
 StorageWrapper* instance = nullptr;
 //always free the returned ptr
+// DO not direct read this since the data can be stale
 char* StorageWrapper::getCompleteContent() {
     File file = LittleFS.open(STORAGE_FILE_NAME, "r");
     if(!file){
@@ -33,8 +34,7 @@ void StorageWrapper::writeRawStr(const char* s){
     file.write((const char*)s);
     file.flush();
     file.close();
-    delay(10);
-    getStoredJson();
+    delay(100);
 
 }
 
@@ -50,6 +50,7 @@ void StorageWrapper::writeCompleteContent() {
 }
 
 StorageWrapper::StorageWrapper() {
+    isDocModified = false;
     doc = new DynamicJsonDocument(512);
     if(!LittleFS.begin()){
         Serial.println("Error while initializing little FS");
@@ -59,6 +60,9 @@ StorageWrapper::StorageWrapper() {
 }
 
 void StorageWrapper::getStoredJson() {
+    if(isDocModified){
+        return;
+    }
     char* fileContent = getCompleteContent();
     if(fileContent == nullptr || strlen(fileContent) < 5) {
         if(fileContent != nullptr)
@@ -92,7 +96,7 @@ void StorageWrapper::setKey(char *key, char *val) {
     Serial.print(":");
     Serial.println(val);
     (*doc)[key] = val;
-    writeCompleteContent();
+    markWriteToPersist();
 }
 
 bool StorageWrapper::allFilesAvailable(char** data, int len) {
@@ -118,14 +122,44 @@ void StorageWrapper::setKey(char *key, int val) {
     itoa(val, data, 10);
     setKey(key, data);
     free(data);
+    markWriteToPersist();
 }
 
 void StorageWrapper::reset() {
     writeRawStr("");
+    isDocModified = false;
+    getStoredJson();
 }
 
 void StorageWrapper::printState() {
     char* data = getCompleteContent();
     Serial.println(data);
     free(data);
+}
+
+void StorageWrapper::loop() {
+    if(shouldFlush()){
+        flushBuffer();
+    }
+}
+
+void StorageWrapper::flushBuffer() {
+    Serial.println("Flushing storage buffer");
+    writeCompleteContent();
+    isDocModified = false;
+    getStoredJson();
+}
+
+bool StorageWrapper::shouldFlush() {
+    if(isDocModified && clockSinceLastModifiedCycle == WAIT_FOR_CYCLES_FOR_COMMIT){
+        clockSinceLastModifiedCycle = 0;
+        return true;
+    }
+    clockSinceLastModifiedCycle+=1;
+    return false;
+}
+
+void StorageWrapper::markWriteToPersist() {
+    isDocModified = true;
+    clockSinceLastModifiedCycle = 0;
 }
