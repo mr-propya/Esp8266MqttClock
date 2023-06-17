@@ -23,6 +23,8 @@
 #define MQTT_SERVER_CONNECT_RETRY 10
 #define MQTT_SERVER_QOS 1
 
+#define LED_CONTROL_MQTT_CMD "led/cmd/"
+#define LED_CONTROL_MQTT_STAT "led/status/"
 
 // ----------- LED Constants ----------- //
 #define LED_PER_DIGIT_SEGMENT 7

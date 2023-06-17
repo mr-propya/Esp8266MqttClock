@@ -48,7 +48,9 @@ bool MqttClientWrapper::connectToServer() {
         if(mqttClient->connected()){
             String subTopic;
             subTopic.concat(deviceId);
-            subTopic.concat("/#");
+            subTopic.concat("/");
+            subTopic.concat(LED_CONTROL_MQTT_CMD);
+            subTopic.concat("#");
             Serial.print("Subscribing to MQTT topic: ");
             Serial.println(subTopic.c_str());
             Serial.println(subTopic.c_str());
@@ -113,7 +115,11 @@ MqttClientWrapper *MqttClientWrapper::getMqttInstance() {
     return mqttInstance;
 }
 
-void MqttClientWrapper::publish(char *topic, char *payload, bool persist) {
+void MqttClientWrapper::publish(char *subTopic, char *payload, bool persist) {
+    String topic;
+    topic.concat(deviceId);
+    topic.concat("/");
+    topic.concat(subTopic);
     Serial.print("Publishing MQTT msg to topic : ");
     Serial.print(topic);
 
@@ -122,6 +128,6 @@ void MqttClientWrapper::publish(char *topic, char *payload, bool persist) {
 
     Serial.print(" and payload : ");
     Serial.println(payload);
-    mqttClient->publish(topic, payload, persist);
+    mqttClient->publish(topic.c_str(), payload, persist);
 }
 

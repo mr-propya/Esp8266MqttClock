@@ -33,7 +33,7 @@ void StorageWrapper::writeRawStr(const char* s){
     file.write((const char*)s);
     file.flush();
     file.close();
-    delay(250);
+    delay(10);
     getStoredJson();
 
 }

@@ -7,6 +7,7 @@
 #define FASTLED_ESP8266_RAW_PIN_ORDER
 #include "helpers/mqtt/mqttClient.h"
 #include "helpers/storage/storageWrapper.h"
+#include "helpers/smartHome/AlexaWrapper.h"
 #include "helpers/clock/clockWrapper.h"
 #include "helpers/led_control/ledControlWrapper.h"
 #include <WiFiUdp.h>
@@ -38,6 +39,7 @@ StorageWrapper *storageWrapper;
 ClockWrapper *clockWrapper;
 LEDWrapper *ledWrapper;
 MqttClientWrapper* mqttClientWrapper;
+AlexaWrapper* alexaWrapper;
 
 
 int brightness = 128;
@@ -119,6 +121,8 @@ void initialize(){
     clockWrapper = ClockWrapper::getClockWrapperInstance();
     mqttClientWrapper = MqttClientWrapper::getMqttInstance();
     ledWrapper = LEDWrapper::getLedWrapperInstance();
+    alexaWrapper = AlexaWrapper::getAlexaWrapperInstance();
+
 }
 
 void setup() {
@@ -137,6 +141,7 @@ void loop(){
     int time = clockWrapper->getTime();
     ledWrapper->setTime(time);
     ledWrapper->loop();
+    alexaWrapper->loop();
     if(DEBUG_ENABLED){
         ledWrapper->printStat();
         storageWrapper->printState();

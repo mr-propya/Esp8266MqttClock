@@ -9,8 +9,6 @@
 #include "helpers/mqtt/mqttClient.h"
 #include <string>
 
-#define LED_CONTROL_MQTT_CMD "led/cmd/"
-#define LED_CONTROL_MQTT_STAT "led/status/"
 
 
 int DIGITS_TO_BINARY_MAPPINGS[] = {
@@ -70,6 +68,13 @@ LEDWrapper::LEDWrapper() {
     loadSavedValues();
     blinkState = false;
     MqttClientWrapper::getMqttInstance()->registerCallback(LED_CONTROL_MQTT_CMD, LEDWrapper::mqttCallBack);
+    AlexaWrapper::getAlexaWrapperInstance()->addCallBack(LEDWrapper::alexaUpdate);
+}
+
+void LEDWrapper::alexaUpdate(bool state,int brightness, int r, int g, int b, char* mode){
+    LEDWrapper::getLedWrapperInstance()->setRgb(r, g, b);
+    LEDWrapper::getLedWrapperInstance()->setBrightness(brightness);
+    LEDWrapper::getLedWrapperInstance()->setState(state);
 }
 
 void LEDWrapper::loop() {
@@ -134,7 +139,12 @@ void LEDWrapper::setBrightness(int b) {
     StorageWrapper::getStorageWrapper()->setKey(CLOCK_UPDATE_PARAM_BRIGHTNESS, brightness);
 }
 
+int lastTime = 0;
 void LEDWrapper::setTime(int time) {
+    if(lastTime != time){
+        needToPushMqttStat = true;
+        lastTime = time;
+    }
     std::stack<int> digits;
     while(time!=0){
         digits.push(time%10);
@@ -257,9 +267,9 @@ bool LEDWrapper::updateUsingJson(DynamicJsonDocument *doc) {
     }
 
     if(doc->containsKey(CLOCK_UPDATE_PARAM_RGB)){
-        int r =(*doc)[CLOCK_UPDATE_PARAM_RGB_R];
-        int g = (*doc)[CLOCK_UPDATE_PARAM_RGB_G];
-        int b = (*doc)[CLOCK_UPDATE_PARAM_RGB_B];
+        int r = (*doc)[CLOCK_UPDATE_PARAM_RGB][CLOCK_UPDATE_PARAM_RGB_R];
+        int g = (*doc)[CLOCK_UPDATE_PARAM_RGB][CLOCK_UPDATE_PARAM_RGB_G];
+        int b = (*doc)[CLOCK_UPDATE_PARAM_RGB][CLOCK_UPDATE_PARAM_RGB_B];
         setRgb(
                 r, g, b
         );
@@ -287,14 +297,16 @@ void LEDWrapper::setState(int state) {
 }
 
 void LEDWrapper::publishState(bool forcePush) {
-    if( !(needToPushMqttStat || forcePush) ){
+    if(!(needToPushMqttStat || forcePush) ){
         return;
     }
+    AlexaWrapper::getAlexaWrapperInstance()->setDeviceState(stateOnOff, brightness, rgb[0], rgb[1], rgb[2]);
 
     StaticJsonDocument<256> jsonDoc;
     jsonDoc[CLOCK_UPDATE_PARAM_STATE_KEY] = stateOnOff == 1 ? CLOCK_UPDATE_PARAM_STATE_ON : CLOCK_UPDATE_PARAM_STATE_OFF;
     jsonDoc[CLOCK_UPDATE_PARAM_BRIGHTNESS] = brightness;
     jsonDoc[CLOCK_UPDATE_PARAM_FILLER_DIGIT] = filler;
+    jsonDoc[CLOCK_UPDATE_PARAM_COLOR_MODE] = CLOCK_UPDATE_VAL_COLOR_MODE;
     JsonObject colorDoc = jsonDoc.createNestedObject(CLOCK_UPDATE_PARAM_RGB);
     colorDoc[CLOCK_UPDATE_PARAM_RGB_R] = rgb[0];
     colorDoc[CLOCK_UPDATE_PARAM_RGB_G] = rgb[1];
@@ -311,7 +323,7 @@ void LEDWrapper::publishState(bool forcePush) {
 
     MqttClientWrapper *mqttClientWrapper = MqttClientWrapper::getMqttInstance();
     mqttClientWrapper->publish((char*)topic.c_str(), (char*)jsonUpdate.c_str(), false);
-
+    needToPushMqttStat = false;
 }
 
 void LEDWrapper::timePadding(bool shouldAddPadding) {

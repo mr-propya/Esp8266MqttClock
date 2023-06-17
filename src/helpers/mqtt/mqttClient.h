@@ -8,6 +8,7 @@
 #include <../.pio/libdeps/nodemcuv2/PubSubClient/src/PubSubClient.h>
 #include "../../../.pio/libdeps/nodemcuv2/ArduinoJson/src/ArduinoJson.h"
 #include <helpers/storage/storageWrapper.h>
+#include <helpers/smartHome/AlexaWrapper.h>
 #include <Arduino.h>
 #include <ESP8266WiFi.h>
 #include "constants.h"

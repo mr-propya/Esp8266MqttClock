@@ -15,6 +15,8 @@
 #define CLOCK_UPDATE_PARAM_RGB_R "r"
 #define CLOCK_UPDATE_PARAM_RGB_G "g"
 #define CLOCK_UPDATE_PARAM_RGB_B "b"
+#define CLOCK_UPDATE_PARAM_COLOR_MODE "color_mode"
+#define CLOCK_UPDATE_VAL_COLOR_MODE "rgb"
 #define CLOCK_UPDATE_PARAM_BRIGHTNESS "brightness"
 #define CLOCK_UPDATE_PARAM_FILLER_DIGIT "filler_digit"
 #define CLOCK_UPDATE_PARAM_STATE_KEY "state"
@@ -53,6 +55,7 @@ private:
     LEDWrapper();
     void loadSavedValues();
     void publishState(bool forcePush);
+    static void alexaUpdate(bool state,int brightness, int r, int g, int b, char* mode);
 public:
     void setBrightness(int b);
     void setState(int state);
