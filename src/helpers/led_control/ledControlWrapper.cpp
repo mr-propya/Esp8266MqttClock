@@ -70,10 +70,16 @@ LEDWrapper::LEDWrapper() {
     AlexaWrapper::getAlexaWrapperInstance()->addCallBack(LEDWrapper::alexaUpdate);
 }
 
-void LEDWrapper::alexaUpdate(bool state,int brightness, int r, int g, int b, char* mode){
-    LEDWrapper::getLedWrapperInstance()->setRgb(r, g, b);
-    LEDWrapper::getLedWrapperInstance()->setBrightness(brightness);
-    LEDWrapper::getLedWrapperInstance()->setState(state);
+void LEDWrapper::alexaUpdate(int state,int brightness, int r, int g, int b, char* mode){
+    if(state != -1){
+        LEDWrapper::getLedWrapperInstance()->setState(state == 1);
+    }
+    if(brightness !=-1){
+        LEDWrapper::getLedWrapperInstance()->setBrightness(brightness);
+    }
+    if(r!=-1 && g!=-1 && b!=-1){
+        LEDWrapper::getLedWrapperInstance()->setRgb(r, g, b);
+    }
 }
 
 void LEDWrapper::loop() {

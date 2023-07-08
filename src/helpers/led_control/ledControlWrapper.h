@@ -56,7 +56,7 @@ private:
     LEDWrapper();
     void loadSavedValues();
     void publishState(bool forcePush);
-    static void alexaUpdate(bool state,int brightness, int r, int g, int b, char* mode);
+    static void alexaUpdate(int state,int brightness, int r, int g, int b, char* mode);
     void initializeFastLedIfNot();
 public:
     void setBrightness(int b);
