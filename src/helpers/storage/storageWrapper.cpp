@@ -163,3 +163,7 @@ void StorageWrapper::markWriteToPersist() {
     isDocModified = true;
     clockSinceLastModifiedCycle = 0;
 }
+
+bool StorageWrapper::isSafeToRestart() {
+    return !isDocModified;
+}

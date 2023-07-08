@@ -2,7 +2,6 @@
 #include "../.pio/libdeps/nodemcuv2/WiFiManager/WiFiManager.h"
 #include "../.pio/libdeps/nodemcuv2/NTPClient/NTPClient.h"
 #include <string>
-#define BLYNK_PRINT Serial
 #define FASTLED_ALLOW_INTERRUPTS 0
 #define FASTLED_ESP8266_RAW_PIN_ORDER
 #include "helpers/mqtt/mqttClient.h"
@@ -31,7 +30,6 @@
 
 
 #define HTTP_POLL_BASE_URL "https://us-central1-customwatch-f5c4a.cloudfunctions.net/getData"
-#define BLYNK_AUTH_TOKEN  "vvY8HRGuGoJn-CbNXTJ62a2_JcBZq6nZ"
 
 WiFiManager wifiManager;
 
@@ -107,7 +105,10 @@ void initializeWifi(){
     }
     wifiManager.setClass("invert");
     wifiManager.setSaveConfigCallback(saveConfigCallback);
-    wifiManager.autoConnect(WIFI_SETUP_SSID, WIFI_SETUP_PASSWORD);
+    wifiManager.setConfigPortalTimeout(120);
+    while(!wifiManager.autoConnect(WIFI_SETUP_SSID, WIFI_SETUP_PASSWORD)){
+        delay(5000);
+    }
 }
 
 bool initializationDone = false;
@@ -132,9 +133,23 @@ void setup() {
     initializeWifi();
     delay(1000);
     initialize();
-    ledWrapper->shouldBlink(true);
+    ledWrapper->shouldBlink(true, false);
+    initializationDone = true;
 }
 
+bool RESTART_FLAG_GLOBAL = false;
+bool needRestart(int time){
+    int mins = time %100;
+    mins = mins%30;
+    if(mins ==28){
+        RESTART_FLAG_GLOBAL = true;
+    }
+    return RESTART_FLAG_GLOBAL;
+}
+
+void restartController(){
+    ESP.restart();
+}
 
 void loop(){
     mqttClientWrapper->poll();
@@ -143,6 +158,9 @@ void loop(){
     ledWrapper->loop();
     alexaWrapper->loop();
     storageWrapper->loop();
+    if(needRestart(time) && storageWrapper->isSafeToRestart()){
+        restartController();
+    }
     if(DEBUG_ENABLED){
         ledWrapper->printStat();
         storageWrapper->printState();

@@ -68,7 +68,7 @@ public:
     void setDotSegment(int segment, bool isOn);
     void setTime(int time);
     void loop();
-    void shouldBlink(bool blinkingEnabled);
+    void shouldBlink(bool blinkingEnabled, bool forceUpdate);
     void printStat();
     static LEDWrapper* getLedWrapperInstance();
 };

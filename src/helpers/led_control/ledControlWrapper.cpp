@@ -38,7 +38,7 @@ void LEDWrapper::loadSavedValues(){
     }
 
     if(StorageWrapper::getStorageWrapper()->keyExists(PARAM_BRIGHTNESS_VAL)){
-        brightness = StorageWrapper::getStorageWrapper()->getNumber(PARAM_RGB_VAL);
+        brightness = StorageWrapper::getStorageWrapper()->getNumber(PARAM_BRIGHTNESS_VAL);
     } else {
         brightness = 128;
     }
@@ -163,13 +163,15 @@ void LEDWrapper::setTime(int time) {
     update();
 }
 
-void LEDWrapper::shouldBlink(bool blinkingEnabled) {
+void LEDWrapper::shouldBlink(bool blinkingEnabled, bool forceUpdate) {
     isBlinking = blinkingEnabled;
     for (int i = 0; i < SEGMENTS_PER_DOT; ++i) {
         setDotSegment(i+1, false);
     }
     blinkDots();
-    update();
+    if(forceUpdate){
+        update();
+    }
 }
 
 void LEDWrapper::blinkDots() {

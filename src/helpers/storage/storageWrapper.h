@@ -33,6 +33,7 @@ public:
     void flushBuffer();
     void printState();
     void loop();
+    bool isSafeToRestart();
 };
 
 
