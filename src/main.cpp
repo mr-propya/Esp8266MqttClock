@@ -111,13 +111,6 @@ void initializeWifi(){
     }
 }
 
-bool initializationDone = false;
-
-void jsonCallback(char* topic, DynamicJsonDocument *doc, char* data){
-    Serial.print("From callback");
-    Serial.println(topic);
-}
-
 void initialize(){
     clockWrapper = ClockWrapper::getClockWrapperInstance();
     mqttClientWrapper = MqttClientWrapper::getMqttInstance();
@@ -133,8 +126,7 @@ void setup() {
     initializeWifi();
     delay(1000);
     initialize();
-    ledWrapper->shouldBlink(true, false);
-    initializationDone = true;
+    ledWrapper->shouldBlink(true);
 }
 
 bool RESTART_FLAG_GLOBAL = false;
@@ -155,9 +147,9 @@ void loop(){
     mqttClientWrapper->poll();
     int time = clockWrapper->getTime();
     ledWrapper->setTime(time);
-    ledWrapper->loop();
     alexaWrapper->loop();
     storageWrapper->loop();
+    ledWrapper->loop();
     if(needRestart(time) && storageWrapper->isSafeToRestart()){
         restartController();
     }

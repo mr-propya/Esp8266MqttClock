@@ -54,12 +54,11 @@ void LEDWrapper::loadSavedValues(){
     } else {
         filler = 10;
     }
-
     needToPushMqttStat = true;
 }
 
 LEDWrapper::LEDWrapper() {
-    FastLED.addLeds<WS2812, D6, GRB>(LED, LED_TOTAL).setCorrection(TypicalLEDStrip);
+    isFastLedInitialized = false;
     black_rgb = (int*) malloc(sizeof(int) * 3);
     rgb = (int*) malloc(sizeof(int) * 3);
     for (int i = 0; i < 3; ++i) {
@@ -123,10 +122,10 @@ void LEDWrapper::updateBulk(int start, int len, int *rgb_l) {
     for (int i = 0; i < len; ++i) {
         LED[start+i] = CRGB(rgb_l[0], rgb_l[1], rgb_l[2]);
     }
-    update();
 }
 
 void LEDWrapper::update() {
+    initializeFastLedIfNot();
     FastLED.setBrightness(brightness);
     FastLED.show();
     publishState(false);
@@ -135,7 +134,6 @@ void LEDWrapper::update() {
 void LEDWrapper::setBrightness(int b) {
     brightness = b;
     needToPushMqttStat = true;
-    update();
     StorageWrapper::getStorageWrapper()->setKey(CLOCK_UPDATE_PARAM_BRIGHTNESS, brightness);
 }
 
@@ -160,24 +158,20 @@ void LEDWrapper::setTime(int time) {
         digits.pop();
         i+=1;
     }
-    update();
 }
 
-void LEDWrapper::shouldBlink(bool blinkingEnabled, bool forceUpdate) {
+void LEDWrapper::shouldBlink(bool blinkingEnabled) {
     isBlinking = blinkingEnabled;
     for (int i = 0; i < SEGMENTS_PER_DOT; ++i) {
         setDotSegment(i+1, false);
     }
     blinkDots();
-    if(forceUpdate){
-        update();
-    }
 }
 
 void LEDWrapper::blinkDots() {
     if(!isBlinking)
         return;
-    if(lastBlink != 0 && (lastBlink - millis()) < DOT_BLINK_INTERVAL * 1000 )
+    if(lastBlink != 0 && ((millis() - lastBlink) < DOT_BLINK_INTERVAL * 1000))
         return;
     blinkState = !blinkState;
     for (int i = 0; i < SEGMENTS_PER_DOT; ++i) {
@@ -225,9 +219,6 @@ void LEDWrapper::mqttCallBack(char *topic, DynamicJsonDocument *doc, char *data)
         wrapper->setBrightness(newBrightness);
         StorageWrapper::getStorageWrapper()->setKey(PARAM_BRIGHTNESS_VAL, newBrightness);
     }
-
-    wrapper->update();
-
 }
 
 void LEDWrapper::setRgb(int r, int g, int b) {
@@ -235,7 +226,6 @@ void LEDWrapper::setRgb(int r, int g, int b) {
     rgb[1]=g;
     rgb[2]=b;
     needToPushMqttStat = false;
-    update();
     String rgbString;
     rgbString.concat(r);
     rgbString.concat(",");
@@ -294,7 +284,6 @@ bool LEDWrapper::updateUsingJson(DynamicJsonDocument *doc) {
 void LEDWrapper::setState(int state) {
     stateOnOff = state == 1 ? 1:0;
     needToPushMqttStat = true;
-    update();
     StorageWrapper::getStorageWrapper()->setKey(CLOCK_UPDATE_PARAM_STATE_KEY, state);
 }
 
@@ -331,6 +320,13 @@ void LEDWrapper::publishState(bool forcePush) {
 void LEDWrapper::timePadding(bool shouldAddPadding) {
     filler = shouldAddPadding ? 0 : 10;
     StorageWrapper::getStorageWrapper()->setKey(CLOCK_UPDATE_PARAM_FILLER_DIGIT, filler);
+}
+
+void LEDWrapper::initializeFastLedIfNot() {
+    if(!isFastLedInitialized){
+        FastLED.addLeds<WS2812, D6, GRB>(LED, LED_TOTAL).setCorrection(TypicalLEDStrip);
+    }
+    isFastLedInitialized = true;
 }
 
 

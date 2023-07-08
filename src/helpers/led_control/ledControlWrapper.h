@@ -41,6 +41,7 @@ private:
     int *rgb;
     int brightness;
     bool needToPushMqttStat;
+    bool isFastLedInitialized;
     int *black_rgb;
     int filler;
     bool isBlinking;
@@ -56,6 +57,7 @@ private:
     void loadSavedValues();
     void publishState(bool forcePush);
     static void alexaUpdate(bool state,int brightness, int r, int g, int b, char* mode);
+    void initializeFastLedIfNot();
 public:
     void setBrightness(int b);
     void setState(int state);
@@ -68,7 +70,7 @@ public:
     void setDotSegment(int segment, bool isOn);
     void setTime(int time);
     void loop();
-    void shouldBlink(bool blinkingEnabled, bool forceUpdate);
+    void shouldBlink(bool blinkingEnabled);
     void printStat();
     static LEDWrapper* getLedWrapperInstance();
 };
