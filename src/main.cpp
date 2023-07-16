@@ -9,6 +9,7 @@
 #include "helpers/smartHome/AlexaWrapper.h"
 #include "helpers/clock/clockWrapper.h"
 #include "helpers/led_control/ledControlWrapper.h"
+#include "helpers/led_control/ColorPaletteHelper.h"
 #include <WiFiUdp.h>
 #include <stack>
 
@@ -38,6 +39,7 @@ ClockWrapper *clockWrapper;
 LEDWrapper *ledWrapper;
 MqttClientWrapper* mqttClientWrapper;
 AlexaWrapper* alexaWrapper;
+GradientHelper* gradientHelper;
 
 
 int brightness = 128;
@@ -116,7 +118,7 @@ void initialize(){
     mqttClientWrapper = MqttClientWrapper::getMqttInstance();
     ledWrapper = LEDWrapper::getLedWrapperInstance();
     alexaWrapper = AlexaWrapper::getAlexaWrapperInstance();
-
+    gradientHelper = GradientHelper::getGradientHelperInstance();
 }
 
 void setup() {
@@ -146,13 +148,15 @@ void restartController(){
 void loop(){
     mqttClientWrapper->poll();
     int time = clockWrapper->getTime();
+//    time+=8000;
     ledWrapper->setTime(time);
     alexaWrapper->loop();
     storageWrapper->loop();
     ledWrapper->loop();
-    if(needRestart(time) && storageWrapper->isSafeToRestart()){
-        restartController();
-    }
+    gradientHelper-> loop();
+//    if(needRestart(time) && storageWrapper->isSafeToRestart()){
+//        restartController();
+//    }
     if(DEBUG_ENABLED){
         ledWrapper->printStat();
         storageWrapper->printState();

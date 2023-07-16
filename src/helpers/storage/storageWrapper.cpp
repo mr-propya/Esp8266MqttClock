@@ -114,7 +114,10 @@ StorageWrapper *StorageWrapper::getStorageWrapper() {
 }
 
 int StorageWrapper::getNumber(char *key) {
-    return atoi(getKey(key));
+    char* s = getKey(key);
+    int val =  atoi(s);
+    free(s);
+    return val;
 }
 
 void StorageWrapper::setKey(char *key, int val) {
@@ -166,4 +169,8 @@ void StorageWrapper::markWriteToPersist() {
 
 bool StorageWrapper::isSafeToRestart() {
     return !isDocModified;
+}
+
+int StorageWrapper::getNumberIfExists(char *key) {
+    return keyExists(key) ? getNumber(key) : -1;
 }

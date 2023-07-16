@@ -128,6 +128,10 @@ void MqttClientWrapper::publish(char *subTopic, char *payload, bool persist) {
 
     Serial.print(" and payload : ");
     Serial.println(payload);
+    if(!mqttClient->connected()){
+        mqttClient->disconnect();
+        connectToServer();
+    }
     mqttClient->publish(topic.c_str(), payload, persist);
 }
 

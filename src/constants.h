@@ -36,6 +36,31 @@
 #define LED_TOTAL (LED_PER_DIGIT_SEGMENT*SEGMENTS_PER_DIGIT* 4 + SEGMENTS_PER_DOT*LED_PER_DOT_SEGMENT)
 #define LED_CHANNELS 4
 
+// ----------- LedWrapper Constants -------//
+#define CLOCK_UPDATE_PARAM_RGB "color"
+#define CLOCK_UPDATE_PARAM_RGB_R "r"
+#define CLOCK_UPDATE_PARAM_RGB_G "g"
+#define CLOCK_UPDATE_PARAM_RGB_B "b"
+#define CLOCK_UPDATE_PARAM_COLOR_MODE "color_pattern"
+
+//this param is for MQTT lights on HA... This has to be constant set below
+#define CLOCK_UPDATE_PARAM_HA_COLOR_MODE "color_mode"
+#define CLOCK_UPDATE_VAL_HA_COLOR_MODE "rgb"
+
+#define CLOCK_UPDATE_PARAM_BRIGHTNESS "brightness"
+#define CLOCK_UPDATE_PARAM_FILLER_DIGIT "filler_digit"
+#define CLOCK_UPDATE_PARAM_STATE_KEY "state"
+#define CLOCK_UPDATE_PARAM_STATE_ON "ON"
+#define CLOCK_UPDATE_PARAM_STATE_OFF "OFF"
+
+
+
+// ----------- ColorManager Constants -------//
+#define COLOR_MANAGER_MODES 3
+
+#define COLOR_MANAGER_MODE_RGB 0
+#define COLOR_MANAGER_MODE_PALETTE 1
+#define COLOR_MANAGER_MODE_PALETTE_SHUFFLE 2
 
 // ----------- Storage Constants ----------- //
 #define STORAGE_FILE_NAME "/data.json"

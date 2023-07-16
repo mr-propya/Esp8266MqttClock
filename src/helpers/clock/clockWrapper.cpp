@@ -21,18 +21,19 @@ void ClockWrapper::setTimeFormat(int amPm) {
     if(amPm == 24){
         timeFormat = 24;
     }
+    StorageWrapper::getStorageWrapper()->setKey(PARAM_AM_PM, timeFormat);
 }
 WiFiUDP ntpUDP;
 NTPClient timeClientInternal(ntpUDP, "pool.ntp.org");
 
 ClockWrapper::ClockWrapper() {
-    timeFormat= 12;
+    timeFormat= StorageWrapper::getStorageWrapper()->keyExists(PARAM_AM_PM) ? StorageWrapper::getStorageWrapper()->getNumberIfExists(PARAM_AM_PM) : 12;
     lastKnownTime = -1;
     timeClient = &timeClientInternal;
     timeClient->begin();
     timeClient->setTimeOffset(
             BASE_NTP_OFFSET
-           + (StorageWrapper::getStorageWrapper()->keyExists(PARAM_MIN_OFFSET_VAL) ? atoi(StorageWrapper::getStorageWrapper()->getKey(PARAM_MIN_OFFSET_VAL)) : 0)
+           + (StorageWrapper::getStorageWrapper()->keyExists(PARAM_MIN_OFFSET_VAL) ? StorageWrapper::getStorageWrapper()->getNumberIfExists(PARAM_MIN_OFFSET_VAL) : 0)
         );
     MqttClientWrapper::getMqttInstance()->registerCallback(CLOCK_CONTROL_MQTT_CMD, ClockWrapper::mqttCallBack);
 }
@@ -87,11 +88,16 @@ void ClockWrapper::mqttCallBack(char *topic, DynamicJsonDocument *doc, char *dat
     Serial.println(data);
 
     std::string topicPath = topicIncoming.substr(strlen(CLOCK_CONTROL_MQTT_CMD));
+
     if(strcmp(MQTT_UPDATE_CLOCK_COMMAND, topicPath.c_str()) == 0){
         if(doc->containsKey(PARAM_MIN_OFFSET_VAL)){
             int offset = atoi((const char*)(*doc)[PARAM_MIN_OFFSET_VAL]);
             wrapper->setOffset(offset);
             StorageWrapper::getStorageWrapper()->setKey(PARAM_MIN_OFFSET_VAL, offset);
+        }
+        if(doc->containsKey(PARAM_AM_PM)){
+            int format = atoi((const char*)(*doc)[PARAM_AM_PM]);
+            wrapper->setTimeFormat(format);
         }
     }
 

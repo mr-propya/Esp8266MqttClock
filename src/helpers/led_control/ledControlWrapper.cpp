@@ -3,12 +3,6 @@
 //
 
 #include "ledControlWrapper.h"
-#include "../.pio/libdeps/nodemcuv2/FastLED/src/FastLED.h"
-#include <stack>
-#include <../.pio/libdeps/nodemcuv2/ArduinoJson/src/ArduinoJson.h>
-#include "helpers/mqtt/mqttClient.h"
-#include <string>
-
 
 
 int DIGITS_TO_BINARY_MAPPINGS[] = {
@@ -19,29 +13,6 @@ CRGB LED[LED_TOTAL];
 
 
 void LEDWrapper::loadSavedValues(){
-    if(StorageWrapper::getStorageWrapper()->keyExists(PARAM_RGB_VAL)){
-        Serial.println("Loading stored RGB val");
-        char* data = StorageWrapper::getStorageWrapper()->getKey(PARAM_RGB_VAL);
-        char *token = strtok(data, ",");
-        int i=0;
-        while (token!=NULL && i<3){
-            Serial.println(token);
-            rgb[i] = atoi(token);
-            i++;
-            token = strtok(NULL, ",");
-        }
-        free(data);
-    }else{
-        rgb[0]=50;
-        rgb[1]=50;
-        rgb[2]=50;
-    }
-
-    if(StorageWrapper::getStorageWrapper()->keyExists(PARAM_BRIGHTNESS_VAL)){
-        brightness = StorageWrapper::getStorageWrapper()->getNumber(PARAM_BRIGHTNESS_VAL);
-    } else {
-        brightness = 128;
-    }
 
     if(StorageWrapper::getStorageWrapper()->keyExists(CLOCK_UPDATE_PARAM_STATE_KEY)){
         stateOnOff = StorageWrapper::getStorageWrapper()->getNumber(CLOCK_UPDATE_PARAM_STATE_KEY);
@@ -59,11 +30,6 @@ void LEDWrapper::loadSavedValues(){
 
 LEDWrapper::LEDWrapper() {
     isFastLedInitialized = false;
-    black_rgb = (int*) malloc(sizeof(int) * 3);
-    rgb = (int*) malloc(sizeof(int) * 3);
-    for (int i = 0; i < 3; ++i) {
-        black_rgb[i]=0;
-    }
     loadSavedValues();
     blinkState = false;
     MqttClientWrapper::getMqttInstance()->registerCallback(LED_CONTROL_MQTT_CMD, LEDWrapper::mqttCallBack);
@@ -75,10 +41,10 @@ void LEDWrapper::alexaUpdate(int state,int brightness, int r, int g, int b, char
         LEDWrapper::getLedWrapperInstance()->setState(state == 1);
     }
     if(brightness !=-1){
-        LEDWrapper::getLedWrapperInstance()->setBrightness(brightness);
+        ColorManager::getColorManagerInstance()->setBrightness(brightness);
     }
     if(r!=-1 && g!=-1 && b!=-1){
-        LEDWrapper::getLedWrapperInstance()->setRgb(r, g, b);
+        ColorManager::getColorManagerInstance()->setRgbColor(r, g, b);
     }
 }
 
@@ -87,17 +53,13 @@ void LEDWrapper::loop() {
     update();
 }
 
-void LEDWrapper::setDotSegment(int segment, bool isOn, int *rgb_l) {
+void LEDWrapper::setDotSegment(int segment, bool isOn) {
     int segmentHead = (SEGMENTS_PER_DIGIT * LED_PER_DIGIT_SEGMENT) * POSITION_DOT_SEGMENT;
     segmentHead += LED_PER_DOT_SEGMENT * (segment -1);
-    updateBulk(segmentHead, LED_PER_DOT_SEGMENT, isOn ? rgb_l : black_rgb);
+    updateBulk(segmentHead, LED_PER_DOT_SEGMENT, isOn);
 }
 
-void LEDWrapper::setDotSegment(int segment, bool isOn){
-    setDotSegment(segment, isOn, rgb);
-}
-
-void LEDWrapper::setDigit(int digit, int value, bool isNumber, int *rgb_l) {
+void LEDWrapper::setDigit(int digit, int value, bool isNumber) {
     if(isNumber)
         value = DIGITS_TO_BINARY_MAPPINGS[value];
 
@@ -107,41 +69,30 @@ void LEDWrapper::setDigit(int digit, int value, bool isNumber, int *rgb_l) {
     }
     for(int i=0; i<SEGMENTS_PER_DIGIT; i++){
         boolean isOn = (value >> i) & 1;
-        int* rgbVal = isOn ? rgb_l: black_rgb;
-        updateBulk(digitHead, LED_PER_DIGIT_SEGMENT, rgbVal);
+        updateBulk(digitHead, LED_PER_DIGIT_SEGMENT, isOn);
         digitHead +=LED_PER_DIGIT_SEGMENT;
     }
-}
-
-void LEDWrapper::setDigit(int digit, int value, bool isNumber) {
-    setDigit(digit, value, isNumber, rgb);
 }
 
 void LEDWrapper::setNumber(int digit, int number) {
     setDigit(digit, number, true);
 }
 
-void LEDWrapper::updateBulk(int start, int len, int *rgb_l) {
-    if(stateOnOff !=1){
-        rgb_l = black_rgb;
-    }
+void LEDWrapper::updateBulk(int start, int len, bool state) {
+    state = stateOnOff && state;
+    ColorManager* colorManager = ColorManager::getColorManagerInstance();
     for (int i = 0; i < len; ++i) {
-        LED[start+i] = CRGB(rgb_l[0], rgb_l[1], rgb_l[2]);
+        LED[start+i] = colorManager->getPixelColor(start+i, state);
     }
 }
 
 void LEDWrapper::update() {
     initializeFastLedIfNot();
-    FastLED.setBrightness(brightness);
+    FastLED.setBrightness(ColorManager::getColorManagerInstance()->getBrightness());
     FastLED.show();
     publishState(false);
 }
 
-void LEDWrapper::setBrightness(int b) {
-    brightness = b;
-    needToPushMqttStat = true;
-    StorageWrapper::getStorageWrapper()->setKey(CLOCK_UPDATE_PARAM_BRIGHTNESS, brightness);
-}
 
 int lastTime = 0;
 void LEDWrapper::setTime(int time) {
@@ -193,13 +144,13 @@ LEDWrapper *LEDWrapper::getLedWrapperInstance() {
 }
 
 
-#define MQTT_RGB_COMMAND "updateRGB"
-#define MQTT_BRIGHTNESS_COMMAND "updateBrightness"
+#define MQTT_RGB_MODE_COMMAND "updateRGBMode"
 #define MQTT_GENERAL_UPDATE_COMMAND "baseConfig/json"
 
 
 void LEDWrapper::mqttCallBack(char *topic, DynamicJsonDocument *doc, char *data) {
     LEDWrapper* wrapper = LEDWrapper::getLedWrapperInstance();
+    ColorManager* colorManagerInstance = ColorManager::getColorManagerInstance();
     std::string topicIncoming(topic);
     Serial.print("Got MQTT data to update LED wrapper : ");
     Serial.println(data);
@@ -210,39 +161,15 @@ void LEDWrapper::mqttCallBack(char *topic, DynamicJsonDocument *doc, char *data)
         intentFulfilled = wrapper->updateUsingJson(doc);
     }
 
-    if(!intentFulfilled && strcmp(MQTT_RGB_COMMAND, topicPath.c_str()) == 0){
-        int r = atoi((const char*)(*doc)[CLOCK_UPDATE_PARAM_RGB_R]);
-        int g = atoi((const char*)(*doc)[CLOCK_UPDATE_PARAM_RGB_G]);
-        int b = atoi((const char*)(*doc)[CLOCK_UPDATE_PARAM_RGB_B]);
-        wrapper->setRgb(
-            r, g, b
-        );
-
+    if(!intentFulfilled && strcmp(MQTT_RGB_MODE_COMMAND, topicPath.c_str()) == 0){
+        int newMode = atoi((const char*)(*doc)[CLOCK_UPDATE_PARAM_COLOR_MODE]);
+        colorManagerInstance->updateColorMode(newMode);
     }
-
-    if(!intentFulfilled && strcmp(MQTT_BRIGHTNESS_COMMAND, topicPath.c_str()) == 0){
-        int newBrightness = atoi((const char*)(*doc)[CLOCK_UPDATE_PARAM_BRIGHTNESS]);
-        wrapper->setBrightness(newBrightness);
-        StorageWrapper::getStorageWrapper()->setKey(PARAM_BRIGHTNESS_VAL, newBrightness);
-    }
-}
-
-void LEDWrapper::setRgb(int r, int g, int b) {
-    rgb[0]=r;
-    rgb[1]=g;
-    rgb[2]=b;
-    needToPushMqttStat = false;
-    String rgbString;
-    rgbString.concat(r);
-    rgbString.concat(",");
-    rgbString.concat(g);
-    rgbString.concat(",");
-    rgbString.concat(b);
-    StorageWrapper::getStorageWrapper()->setKey(PARAM_RGB_VAL, (char*)rgbString.c_str());
 
 }
 
 void LEDWrapper::printStat() {
+    int* rgb = ColorManager::getColorManagerInstance()->getColor();
     Serial.println("Led Stats: ");
     Serial.print("\tRGB val: ");
     Serial.print(rgb[0]);
@@ -268,15 +195,13 @@ bool LEDWrapper::updateUsingJson(DynamicJsonDocument *doc) {
         int r = (*doc)[CLOCK_UPDATE_PARAM_RGB][CLOCK_UPDATE_PARAM_RGB_R];
         int g = (*doc)[CLOCK_UPDATE_PARAM_RGB][CLOCK_UPDATE_PARAM_RGB_G];
         int b = (*doc)[CLOCK_UPDATE_PARAM_RGB][CLOCK_UPDATE_PARAM_RGB_B];
+        ColorManager::getColorManagerInstance()->setRgbColor(r, g, b);
         hasUpdate = true;
-        setRgb(
-                r, g, b
-        );
     }
 
     if(doc->containsKey(CLOCK_UPDATE_PARAM_BRIGHTNESS)) {
         hasUpdate = true;
-        setBrightness((*doc)[CLOCK_UPDATE_PARAM_BRIGHTNESS]);
+        ColorManager::getColorManagerInstance()->setBrightness((*doc)[CLOCK_UPDATE_PARAM_BRIGHTNESS]);
     }
 
     if(doc->containsKey(CLOCK_UPDATE_PARAM_FILLER_DIGIT)){
@@ -294,16 +219,20 @@ void LEDWrapper::setState(int state) {
 }
 
 void LEDWrapper::publishState(bool forcePush) {
-    if(!(needToPushMqttStat || forcePush) ){
+    ColorManager* colorManagerInstance = ColorManager::getColorManagerInstance();
+    int *rgb = colorManagerInstance->getColor();
+
+    if(!(needToPushMqttStat || forcePush || colorManagerInstance->needsToPublishUpdate()) ){
         return;
     }
-    AlexaWrapper::getAlexaWrapperInstance()->setDeviceState(stateOnOff, brightness, rgb[0], rgb[1], rgb[2]);
+
+    AlexaWrapper::getAlexaWrapperInstance()->setDeviceState(stateOnOff, colorManagerInstance->getBrightness(), rgb[0], rgb[1], rgb[2]);
 
     StaticJsonDocument<256> jsonDoc;
     jsonDoc[CLOCK_UPDATE_PARAM_STATE_KEY] = stateOnOff == 1 ? CLOCK_UPDATE_PARAM_STATE_ON : CLOCK_UPDATE_PARAM_STATE_OFF;
-    jsonDoc[CLOCK_UPDATE_PARAM_BRIGHTNESS] = brightness;
+    jsonDoc[CLOCK_UPDATE_PARAM_BRIGHTNESS] = colorManagerInstance->getBrightness();
     jsonDoc[CLOCK_UPDATE_PARAM_FILLER_DIGIT] = filler;
-    jsonDoc[CLOCK_UPDATE_PARAM_COLOR_MODE] = CLOCK_UPDATE_VAL_COLOR_MODE;
+    jsonDoc[CLOCK_UPDATE_PARAM_HA_COLOR_MODE] = CLOCK_UPDATE_VAL_HA_COLOR_MODE;
     JsonObject colorDoc = jsonDoc.createNestedObject(CLOCK_UPDATE_PARAM_RGB);
     colorDoc[CLOCK_UPDATE_PARAM_RGB_R] = rgb[0];
     colorDoc[CLOCK_UPDATE_PARAM_RGB_G] = rgb[1];

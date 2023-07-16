@@ -26,6 +26,7 @@ public:
     bool keyExists( char* key);
     char* getKey( char* key);
     int getNumber(char* key);
+    int getNumberIfExists(char* key);
     void setKey( char* key, char* val);
     void setKey(char* key, int val);
     static StorageWrapper* getStorageWrapper();

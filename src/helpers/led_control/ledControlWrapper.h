@@ -6,22 +6,15 @@
 #define CUSTOMCLOCKNEW_LEDCONTROLWRAPPER_H
 
 #include "constants.h"
+#include "./ColorManager.h"
+#include "../clock/clockWrapper.h"
 #include "../.pio/libdeps/nodemcuv2/FastLED/src/FastLED.h"
 #include <stack>
 #include <../.pio/libdeps/nodemcuv2/ArduinoJson/src/ArduinoJson.h>
+#include "helpers/mqtt/mqttClient.h"
+#include "ColorPaletteHelper.h"
+#include <string>
 
-
-#define CLOCK_UPDATE_PARAM_RGB "color"
-#define CLOCK_UPDATE_PARAM_RGB_R "r"
-#define CLOCK_UPDATE_PARAM_RGB_G "g"
-#define CLOCK_UPDATE_PARAM_RGB_B "b"
-#define CLOCK_UPDATE_PARAM_COLOR_MODE "color_mode"
-#define CLOCK_UPDATE_VAL_COLOR_MODE "rgb"
-#define CLOCK_UPDATE_PARAM_BRIGHTNESS "brightness"
-#define CLOCK_UPDATE_PARAM_FILLER_DIGIT "filler_digit"
-#define CLOCK_UPDATE_PARAM_STATE_KEY "state"
-#define CLOCK_UPDATE_PARAM_STATE_ON "ON"
-#define CLOCK_UPDATE_PARAM_STATE_OFF "OFF"
 
 /*
  *         1
@@ -38,17 +31,14 @@
 
 class LEDWrapper{
 private:
-    int *rgb;
-    int brightness;
     bool needToPushMqttStat;
     bool isFastLedInitialized;
-    int *black_rgb;
     int filler;
     bool isBlinking;
     long lastBlink;
     int stateOnOff;
     bool blinkState;
-    void updateBulk(int start, int len, int rgb[3]);
+    void updateBulk(int start, int len, bool state);
     void blinkDots();
     void update();
     bool updateUsingJson(DynamicJsonDocument *doc);
@@ -59,14 +49,10 @@ private:
     static void alexaUpdate(int state,int brightness, int r, int g, int b, char* mode);
     void initializeFastLedIfNot();
 public:
-    void setBrightness(int b);
     void setState(int state);
     void timePadding(bool shouldAddPadding);
-    void setRgb(int r, int g, int b);
-    void setDigit(int digit, int value, bool isNumber, int *rgb_l);
     void setDigit(int digit, int value, bool isNumber);
     void setNumber(int digit, int number);
-    void setDotSegment(int segment, bool isOn, int *rgb_l);
     void setDotSegment(int segment, bool isOn);
     void setTime(int time);
     void loop();
