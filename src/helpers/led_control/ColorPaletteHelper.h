@@ -13,13 +13,16 @@
 class GradientHelper{
 private:
     GradientHelper();
-    CRGBPalette16 palette;
+    std::vector<CRGBPalette16> availablePalettes;
+    int paletteIndex;
     int offset;
     long lastUpdate;
 public:
     CRGB getColorFromPalette(int ledIndex, int brightness);
     static GradientHelper* getGradientHelperInstance();
     void loop();
+    void showNextPalette();
+    void setPaletteIndex(int index);
 };
 
 

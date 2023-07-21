@@ -40,7 +40,6 @@ private:
     bool blinkState;
     void updateBulk(int start, int len, bool state);
     void blinkDots();
-    void update();
     bool updateUsingJson(DynamicJsonDocument *doc);
     static void mqttCallBack(char* topic, DynamicJsonDocument *doc, char* data);
     LEDWrapper();
@@ -55,6 +54,7 @@ public:
     void setNumber(int digit, int number);
     void setDotSegment(int segment, bool isOn);
     void setTime(int time);
+    void update();
     void loop();
     void shouldBlink(bool blinkingEnabled);
     void printStat();

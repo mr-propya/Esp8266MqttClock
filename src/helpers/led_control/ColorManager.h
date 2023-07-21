@@ -8,19 +8,30 @@
 #include "../storage/storageWrapper.h"
 #include "../../constants.h"
 #include "../.pio/libdeps/nodemcuv2/FastLED/src/FastLED.h"
+#include "../../../.pio/libdeps/nodemcuv2/ArduinoJson/src/ArduinoJson.h"
+#include "./ColorPaletteHelper.h"
+#include "../mqtt/mqttClient.h"
+
+
+class ColorStatus {
+public:
+    int* staticColorRgb;
+    int brightness;
+    int mode;
+    int paletteIdx;
+};
 
 class ColorManager {
 
 
 private:
     CRGB blackColor;
-    int* staticColorRgb;
-    int brightness;
-    int mode;
+    ColorStatus primaryColorStatus;
     bool stateUpdated;
     ColorManager();
     void loadSavedValues();
     CRGB getStaticOnColor();
+    ColorStatus previousColorMode;
 
 public:
     void setRgbColor(int r, int g, int b);
@@ -34,6 +45,10 @@ public:
     int getBrightness();
     int* getColor();
     char* getStringColorMode();
+    void updateTemporary(ColorStatus temporaryColorStatus);
+    void rollbackTemporaryChanges();
+    void loop();
+    static void updateColorModeMqtt(char* topic, DynamicJsonDocument* doc, char* rawData);
 
 
 };

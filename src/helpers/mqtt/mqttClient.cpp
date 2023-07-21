@@ -3,18 +3,7 @@
 //
 
 #include "mqttClient.h"
-#include <string.h>
-#include <Arduino.h>
-#include <../.pio/libdeps/nodemcuv2/PubSubClient/src/PubSubClient.h>
-#include <cstdlib>
-#include <ESP8266WiFi.h>
-#include "vector"
-#include <helpers/storage/storageWrapper.h>
 
-#include <CertStoreBearSSL.h>
-#include <string>
-#include "constants.h"
-#include "../../../.pio/libdeps/nodemcuv2/ArduinoJson/src/ArduinoJson.h"
 
 MqttClientWrapper* mqttInstance = nullptr;
 
@@ -37,8 +26,12 @@ MqttClientWrapper::MqttClientWrapper(char *id) {
 
 bool MqttClientWrapper::connectToServer() {
     int tryCounter = 0;
+    Serial.println(ESP.getFreeHeap());
+
     while (tryCounter <= MQTT_SERVER_CONNECT_RETRY && !mqttClient->connected()){
         tryCounter+=1;
+        Serial.println("Wifi state ");
+        Serial.println(WiFiClient().connected());
         Serial.println("Trying to connect to MQTT server");
         int response = mqttClient->connect(deviceId,MQTT_SERVER_USER, MQTT_SERVER_PASSWORD);
         Serial.print("MQTT server current response code");
@@ -49,8 +42,7 @@ bool MqttClientWrapper::connectToServer() {
             String subTopic;
             subTopic.concat(deviceId);
             subTopic.concat("/");
-            subTopic.concat(LED_CONTROL_MQTT_CMD);
-            subTopic.concat("#");
+            subTopic.concat(MQTT_SUBSCRIPTION);
             Serial.print("Subscribing to MQTT topic: ");
             Serial.println(subTopic.c_str());
             Serial.println(subTopic.c_str());

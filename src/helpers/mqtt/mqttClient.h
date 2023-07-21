@@ -9,10 +9,13 @@
 #include "../../../.pio/libdeps/nodemcuv2/ArduinoJson/src/ArduinoJson.h"
 #include <helpers/storage/storageWrapper.h>
 #include <helpers/smartHome/AlexaWrapper.h>
-#include <Arduino.h>
-#include <ESP8266WiFi.h>
 #include "constants.h"
 #include "vector"
+#include <string>
+#include <Arduino.h>
+#include <cstdlib>
+#include <CertStoreBearSSL.h>
+
 
 class MqttClientWrapper{
 
