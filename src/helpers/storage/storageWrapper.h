@@ -5,15 +5,10 @@
 #ifndef CUSTOMCLOCKNEW_STORAGEWRAPPER_H
 #define CUSTOMCLOCKNEW_STORAGEWRAPPER_H
 
+#include <../.pio/libdeps/nodemcuv2/ArduinoJson/src/ArduinoJson.h>
 #include <LittleFS.h>
 #include "constants.h"
-#include <string>
 
-#if defined (ARDUINO_ARCH_ESP8266)
-#include <../.pio/libdeps/nodemcuv2/ArduinoJson/src/ArduinoJson.h>
-#elif defined(ESP32)
-#include <../.pio/libdeps/esp32/ArduinoJson/src/ArduinoJson.h>
-#endif
 class StorageWrapper{
 private:
     DynamicJsonDocument* doc;

@@ -115,6 +115,9 @@ void initializeWifi(){
     while(!wifiManager.autoConnect(WIFI_SETUP_SSID, WIFI_SETUP_PASSWORD)){
         delay(5000);
     }
+    Serial.print("Wifi internal");
+    Serial.print(WiFiClient().localIP().toString());
+    Serial.println(WiFiClient().connected());
 }
 
 void initialize(){
@@ -132,6 +135,10 @@ void setup() {
     Serial.print("Reading");
     storageWrapper = StorageWrapper::getStorageWrapper();
     initializeWifi();
+    while (WiFi.status() != WL_CONNECTED) {
+        delay(500);
+        Serial.println("Waiting for wifi to be connected");
+    }
     delay(1000);
     initialize();
     ledWrapper->shouldBlink(true);

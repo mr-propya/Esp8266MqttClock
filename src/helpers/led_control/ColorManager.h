@@ -7,16 +7,11 @@
 
 #include "../storage/storageWrapper.h"
 #include "../../constants.h"
+#include "../.pio/libdeps/nodemcuv2/FastLED/src/FastLED.h"
+#include "../../../.pio/libdeps/nodemcuv2/ArduinoJson/src/ArduinoJson.h"
 #include "./ColorPaletteHelper.h"
 #include "../mqtt/mqttClient.h"
 
-#if defined (ARDUINO_ARCH_ESP8266)
-#include "../.pio/libdeps/nodemcuv2/FastLED/src/FastLED.h"
-#include "../../../.pio/libdeps/nodemcuv2/ArduinoJson/src/ArduinoJson.h"
-#elif defined(ESP32)
-#include "../.pio/libdeps/esp32/FastLED/src/FastLED.h"
-#include "../../../.pio/libdeps/esp32/ArduinoJson/src/ArduinoJson.h"
-#endif
 
 class ColorStatus {
 public:

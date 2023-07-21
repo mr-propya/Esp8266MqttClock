@@ -2,8 +2,11 @@
 // Created by Tamse, Mahesh on 16/04/23.
 //
 
+#include <LittleFS.h>
 #include "storageWrapper.h"
-
+#include "constants.h"
+#include <../.pio/libdeps/nodemcuv2/ArduinoJson/src/ArduinoJson.h>
+#include <string>
 
 StorageWrapper* instance = nullptr;
 //always free the returned ptr
@@ -28,14 +31,7 @@ void StorageWrapper::writeRawStr(const char* s){
         Serial.println("Error opening storage file for write");
         return;
     }
-    int i=0;
-    while (true){
-        file.write(s[i]);
-        if(s[i]=='\0'){
-            break;
-        }
-        i++;
-    }
+    file.write((const char*)s);
     file.flush();
     file.close();
     delay(100);
@@ -56,7 +52,7 @@ void StorageWrapper::writeCompleteContent() {
 StorageWrapper::StorageWrapper() {
     isDocModified = false;
     doc = new DynamicJsonDocument(512);
-    if(!LittleFS.begin(true)){
+    if(!LittleFS.begin()){
         Serial.println("Error while initializing little FS");
         return;
     }

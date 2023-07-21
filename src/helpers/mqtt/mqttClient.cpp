@@ -13,14 +13,13 @@ MqttClientWrapper::MqttClientWrapper(char *id) {
     deviceId = (char*) malloc(sizeof(char) * (len+1));
     strcpy(deviceId, id);
     deviceId[len] = '\0';
-    Serial.println("Wifi status");
-    Serial.println(WiFiClient().connected());
-//    WiFiClientSecure *bear = new WiFiClientSecure();
-//    bear->setInsecure();
 
-    mqttClient = new PubSubClient();
+    BearSSL::WiFiClientSecure *bear = new BearSSL::WiFiClientSecure();
+    bear->setInsecure();
+
+    mqttClient = new PubSubClient(*bear);
     mqttClient->setServer(MQTT_SERVER_HOST, MQTT_SERVER_PORT);
-//    mqttClient->setCallback(callBack);
+    mqttClient->setCallback(callBack);
     mqttClient->setKeepAlive(GLOBAL_MAX_LOOP_TIMEOUT);
     connectToServer();
 }
@@ -31,6 +30,8 @@ bool MqttClientWrapper::connectToServer() {
 
     while (tryCounter <= MQTT_SERVER_CONNECT_RETRY && !mqttClient->connected()){
         tryCounter+=1;
+        Serial.println("Wifi state ");
+        Serial.println(WiFiClient().connected());
         Serial.println("Trying to connect to MQTT server");
         int response = mqttClient->connect(deviceId,MQTT_SERVER_USER, MQTT_SERVER_PASSWORD);
         Serial.print("MQTT server current response code");
@@ -83,7 +84,7 @@ void MqttClientWrapper::callBack(char *topic, byte *payload, int len) {
         if(interestedTopic == nullptr || strlen(interestedTopic)==0 || topicPath.rfind(interestedTopic) == 0){
             Serial.print("Notifying subscriber with prefix ");
             Serial.println(interestedTopic == nullptr ? "NULL_PTR" : interestedTopic);
-            mqttInstance->subscriptionTopicCallback[i]((char*)topicPath.data(), &doc, data);
+            mqttInstance->subscriptionTopicCallback[i](topicPath.data(), &doc, data);
         }
     }
 

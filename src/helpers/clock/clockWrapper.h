@@ -5,19 +5,13 @@
 #ifndef CUSTOMCLOCKNEW_CLOCKWRAPPER_H
 #define CUSTOMCLOCKNEW_CLOCKWRAPPER_H
 
+#include "../../../.pio/libdeps/nodemcuv2/NTPClient/NTPClient.h"
 #include <WiFiUdp.h>
+#include <core_esp8266_features.h>
 #include "constants.h"
 #include "helpers/storage/storageWrapper.h"
 #include "helpers/mqtt/mqttClient.h"
-#include <string>
-
-#if defined (ARDUINO_ARCH_ESP8266)
-    #include "../../../.pio/libdeps/nodemcuv2/NTPClient/NTPClient.h"
-    #include <../.pio/libdeps/nodemcuv2/ArduinoJson/src/ArduinoJson.h>
-#elif defined(ESP32)
-    #include "../../../.pio/libdeps/esp32/NTPClient/NTPClient.h"
-    #include <../.pio/libdeps/esp32/ArduinoJson/src/ArduinoJson.h>
-#endif
+#include <../.pio/libdeps/nodemcuv2/ArduinoJson/src/ArduinoJson.h>
 
 
 class ClockWrapper{

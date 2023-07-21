@@ -5,15 +5,8 @@
 #ifndef CUSTOMCLOCKNEW_ALEXAWRAPPER_H
 #define CUSTOMCLOCKNEW_ALEXAWRAPPER_H
 
-#include <vector>
-#if defined (ARDUINO_ARCH_ESP8266)
 #include "../../../.pio/libdeps/nodemcuv2/Espalexa/src/Espalexa.h"
 #include "../../../.pio/libdeps/nodemcuv2/Espalexa/src/EspalexaDevice.h"
-#elif defined(ESP32)
-#include "../../../.pio/libdeps/esp32/Espalexa/src/Espalexa.h"
-#include "../../../.pio/libdeps/esp32/Espalexa/src/EspalexaDevice.h"
-#endif
-
 
 class AlexaWrapper {
 private:

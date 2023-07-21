@@ -5,6 +5,8 @@
 #ifndef CUSTOMCLOCKNEW_MQTTCLIENT_H
 #define CUSTOMCLOCKNEW_MQTTCLIENT_H
 
+#include <../.pio/libdeps/nodemcuv2/PubSubClient/src/PubSubClient.h>
+#include "../../../.pio/libdeps/nodemcuv2/ArduinoJson/src/ArduinoJson.h"
 #include <helpers/storage/storageWrapper.h>
 #include <helpers/smartHome/AlexaWrapper.h>
 #include "constants.h"
@@ -12,15 +14,8 @@
 #include <string>
 #include <Arduino.h>
 #include <cstdlib>
-#include "WiFiClient.h"
+#include <CertStoreBearSSL.h>
 
-#if defined (ARDUINO_ARCH_ESP8266)
-#include <../.pio/libdeps/nodemcuv2/PubSubClient/src/PubSubClient.h>
-#include <../.pio/libdeps/nodemcuv2/ArduinoJson/src/ArduinoJson.h>
-#elif defined(ESP32)
-#include <../.pio/libdeps/esp32/PubSubClient/src/PubSubClient.h>
-#include <../.pio/libdeps/esp32/ArduinoJson/src/ArduinoJson.h>
-#endif
 
 class MqttClientWrapper{
 
