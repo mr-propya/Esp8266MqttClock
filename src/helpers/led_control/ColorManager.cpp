@@ -7,12 +7,12 @@
 void ColorManager::loadSavedValues() {
     int modeTemp = StorageWrapper::getStorageWrapper()->getNumberIfExists(CLOCK_UPDATE_PARAM_COLOR_MODE);
     if(modeTemp !=-1){
-        mode = modeTemp;
+        primaryColorStatus.mode = modeTemp;
     }
 
     int brightnessTemp = StorageWrapper::getStorageWrapper()->getNumberIfExists(PARAM_BRIGHTNESS_VAL);
     if(brightnessTemp !=-1){
-        brightness = brightnessTemp;
+        primaryColorStatus.brightness = brightnessTemp;
     }
 
     if(StorageWrapper::getStorageWrapper()->keyExists(PARAM_RGB_VAL)){
@@ -21,14 +21,12 @@ void ColorManager::loadSavedValues() {
         int i=0;
         while (token!=NULL && i<3){
             Serial.println(token);
-            staticColorRgb[i] = atoi(token);
+            primaryColorStatus.staticColorRgb[i] = atoi(token);
             i++;
             token = strtok(NULL, ",");
         }
         free(data);
     }
-
-
 }
 
 void fillColorArray(int* arr, int size, int val){
@@ -39,18 +37,18 @@ void fillColorArray(int* arr, int size, int val){
 
 ColorManager::ColorManager() {
     blackColor = CRGB(0,0,0);
-    staticColorRgb = (int*) malloc(sizeof(int)*3);
-    fillColorArray(staticColorRgb, 3, 255);
-    brightness = 128;
-    mode = COLOR_MANAGER_MODE_RGB;
+    primaryColorStatus.staticColorRgb = (int*) malloc(sizeof(int) * 3);
+    fillColorArray(primaryColorStatus.staticColorRgb, 3, 255);
+    primaryColorStatus.brightness = 128;
+    primaryColorStatus.mode = COLOR_MANAGER_MODE_DEFAULT;
     loadSavedValues();
-
+    MqttClientWrapper::getMqttInstance()->registerCallback(COLOR_MODE_CONTROL_MQTT_CMD, updateColorModeMqtt);
 }
 
 void ColorManager::setRgbColor(int r, int g, int b) {
-    staticColorRgb[0]=r;
-    staticColorRgb[1]=g;
-    staticColorRgb[2]=b;
+    primaryColorStatus.staticColorRgb[0]=r;
+    primaryColorStatus.staticColorRgb[1]=g;
+    primaryColorStatus.staticColorRgb[2]=b;
     String rgbString;
     rgbString.concat(r);
     rgbString.concat(",");
@@ -62,9 +60,9 @@ void ColorManager::setRgbColor(int r, int g, int b) {
 }
 
 void ColorManager::setBrightness(int b) {
-    brightness = b;
+    primaryColorStatus.brightness = b;
     stateUpdated = true;
-    StorageWrapper::getStorageWrapper()->setKey(PARAM_BRIGHTNESS_VAL, brightness);
+    StorageWrapper::getStorageWrapper()->setKey(PARAM_BRIGHTNESS_VAL, primaryColorStatus.brightness);
 }
 
 void ColorManager::setPaletteMode() {
@@ -82,17 +80,25 @@ bool ColorManager::needsToPublishUpdate() {
 }
 
 void ColorManager::updateColorMode(int m) {
-    mode = m % COLOR_MANAGER_MODES;
+    primaryColorStatus.mode = m % COLOR_MANAGER_MODES_LEN;
     stateUpdated = true;
-    StorageWrapper::getStorageWrapper()->setKey(CLOCK_UPDATE_PARAM_COLOR_MODE, mode);
-
+    StorageWrapper::getStorageWrapper()->setKey(CLOCK_UPDATE_PARAM_COLOR_MODE, primaryColorStatus.mode);
 }
 
 CRGB ColorManager::getPixelColor(int index, bool stateOn) {
     if(!stateOn){
         return blackColor;
     }
-    return getStaticOnColor();
+    switch (primaryColorStatus.mode) {
+        case COLOR_MANAGER_MODE_RGB:
+            return getStaticOnColor();
+        case COLOR_MANAGER_MODE_PALETTE:
+            return GradientHelper::getGradientHelperInstance()->getColorFromPalette(index, primaryColorStatus.brightness);
+        case COLOR_MANAGER_MODE_PALETTE_SHUFFLE:
+            //TODO implement shuffle
+        default:
+            return getStaticOnColor();
+    }
 }
 
 ColorManager* colorManagerInstance = nullptr;
@@ -104,11 +110,11 @@ ColorManager *ColorManager::getColorManagerInstance() {
 }
 
 int ColorManager::getBrightness() {
-    return brightness;
+    return primaryColorStatus.brightness;
 }
 
 int *ColorManager::getColor() {
-    return staticColorRgb;
+    return primaryColorStatus.staticColorRgb;
 }
 
 char *ColorManager::getStringColorMode() {
@@ -116,5 +122,33 @@ char *ColorManager::getStringColorMode() {
 }
 
 CRGB ColorManager::getStaticOnColor() {
-    return CRGB(staticColorRgb[0], staticColorRgb[1], staticColorRgb[2]);
+    return CRGB(primaryColorStatus.staticColorRgb[0], primaryColorStatus.staticColorRgb[1], primaryColorStatus.staticColorRgb[2]);
 }
+
+void ColorManager::loop() {
+
+}
+
+void ColorManager::updateColorModeMqtt(char *topic, DynamicJsonDocument* doc, char *rawData) {
+    Serial.println(rawData);
+    if(doc->containsKey(CLOCK_UPDATE_PARAM_COLOR_MODE)){
+        int targetMode = (*doc)[CLOCK_UPDATE_PARAM_COLOR_MODE];
+        ColorManager::getColorManagerInstance()->updateColorMode(targetMode);
+        if(doc->containsKey(CLOCK_UPDATE_PARAM_COLOR_PATTERN_INDEX)
+                && ColorManager::getColorManagerInstance()->primaryColorStatus.mode == COLOR_MANAGER_MODE_PALETTE){
+            GradientHelper::getGradientHelperInstance()->setPaletteIndex((*doc)[CLOCK_UPDATE_PARAM_COLOR_PATTERN_INDEX]);
+        }else{
+            GradientHelper::getGradientHelperInstance()->showNextPalette();
+        }
+    }
+}
+
+void ColorManager::rollbackTemporaryChanges() {
+    primaryColorStatus = previousColorMode;
+}
+
+void ColorManager::updateTemporary(ColorStatus temporaryColorStatus) {
+    previousColorMode = primaryColorStatus;
+    primaryColorStatus = temporaryColorStatus;
+}
+

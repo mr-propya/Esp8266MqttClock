@@ -3,18 +3,7 @@
 //
 
 #include "mqttClient.h"
-#include <string.h>
-#include <Arduino.h>
-#include <../.pio/libdeps/nodemcuv2/PubSubClient/src/PubSubClient.h>
-#include <cstdlib>
-#include <ESP8266WiFi.h>
-#include "vector"
-#include <helpers/storage/storageWrapper.h>
 
-#include <CertStoreBearSSL.h>
-#include <string>
-#include "constants.h"
-#include "../../../.pio/libdeps/nodemcuv2/ArduinoJson/src/ArduinoJson.h"
 
 MqttClientWrapper* mqttInstance = nullptr;
 
@@ -24,19 +13,22 @@ MqttClientWrapper::MqttClientWrapper(char *id) {
     deviceId = (char*) malloc(sizeof(char) * (len+1));
     strcpy(deviceId, id);
     deviceId[len] = '\0';
+    Serial.println("Wifi status");
+    Serial.println(WiFiClient().connected());
+//    WiFiClientSecure *bear = new WiFiClientSecure();
+//    bear->setInsecure();
 
-    BearSSL::WiFiClientSecure *bear = new BearSSL::WiFiClientSecure();
-    bear->setInsecure();
-
-    mqttClient = new PubSubClient(*bear);
+    mqttClient = new PubSubClient();
     mqttClient->setServer(MQTT_SERVER_HOST, MQTT_SERVER_PORT);
-    mqttClient->setCallback(callBack);
+//    mqttClient->setCallback(callBack);
     mqttClient->setKeepAlive(GLOBAL_MAX_LOOP_TIMEOUT);
     connectToServer();
 }
 
 bool MqttClientWrapper::connectToServer() {
     int tryCounter = 0;
+    Serial.println(ESP.getFreeHeap());
+
     while (tryCounter <= MQTT_SERVER_CONNECT_RETRY && !mqttClient->connected()){
         tryCounter+=1;
         Serial.println("Trying to connect to MQTT server");
@@ -49,8 +41,7 @@ bool MqttClientWrapper::connectToServer() {
             String subTopic;
             subTopic.concat(deviceId);
             subTopic.concat("/");
-            subTopic.concat(LED_CONTROL_MQTT_CMD);
-            subTopic.concat("#");
+            subTopic.concat(MQTT_SUBSCRIPTION);
             Serial.print("Subscribing to MQTT topic: ");
             Serial.println(subTopic.c_str());
             Serial.println(subTopic.c_str());
@@ -92,7 +83,7 @@ void MqttClientWrapper::callBack(char *topic, byte *payload, int len) {
         if(interestedTopic == nullptr || strlen(interestedTopic)==0 || topicPath.rfind(interestedTopic) == 0){
             Serial.print("Notifying subscriber with prefix ");
             Serial.println(interestedTopic == nullptr ? "NULL_PTR" : interestedTopic);
-            mqttInstance->subscriptionTopicCallback[i](topicPath.data(), &doc, data);
+            mqttInstance->subscriptionTopicCallback[i]((char*)topicPath.data(), &doc, data);
         }
     }
 

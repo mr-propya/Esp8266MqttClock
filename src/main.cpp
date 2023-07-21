@@ -1,6 +1,4 @@
 #include <Arduino.h>
-#include "../.pio/libdeps/nodemcuv2/WiFiManager/WiFiManager.h"
-#include "../.pio/libdeps/nodemcuv2/NTPClient/NTPClient.h"
 #include <string>
 #define FASTLED_ALLOW_INTERRUPTS 0
 #define FASTLED_ESP8266_RAW_PIN_ORDER
@@ -9,9 +7,15 @@
 #include "helpers/smartHome/AlexaWrapper.h"
 #include "helpers/clock/clockWrapper.h"
 #include "helpers/led_control/ledControlWrapper.h"
-#include "helpers/led_control/ColorPaletteHelper.h"
+//#include "helpers/led_control/ColorPaletteHelper.h"
 #include <WiFiUdp.h>
 #include <stack>
+
+#if defined (ARDUINO_ARCH_ESP8266)
+#include "../.pio/libdeps/nodemcuv2/WiFiManager/WiFiManager.h"
+#elif defined(ESP32)
+#include "../.pio/libdeps/esp32/WiFiManager/WiFiManager.h"
+#endif
 
 
 #define LED_PER_DIGIT_SEGMENT 7
@@ -94,7 +98,7 @@ void initializeWifi(){
     for (auto item: customInputNames){
         Serial.print("Checking vars ");
         Serial.println(item.c_str());
-        if(!storageWrapper->keyExists(item.data())){
+        if(!storageWrapper->keyExists((char*)item.data())){
             Serial.print("Resetting Wifi Since details not available \n");
             resetSettings();
             break;
@@ -114,6 +118,8 @@ void initializeWifi(){
 }
 
 void initialize(){
+    Serial.println(ESP.getFreeHeap());
+//    MQTT should always be initialized first bcoz there might be dependencies on it for below wrappers
     clockWrapper = ClockWrapper::getClockWrapperInstance();
     mqttClientWrapper = MqttClientWrapper::getMqttInstance();
     ledWrapper = LEDWrapper::getLedWrapperInstance();
@@ -134,8 +140,8 @@ void setup() {
 bool RESTART_FLAG_GLOBAL = false;
 bool needRestart(int time){
     int mins = time %100;
-    mins = mins%30;
-    if(mins ==28){
+    int hrs = time/100;
+    if(hrs == 1 && mins ==1){
         RESTART_FLAG_GLOBAL = true;
     }
     return RESTART_FLAG_GLOBAL;
@@ -148,15 +154,14 @@ void restartController(){
 void loop(){
     mqttClientWrapper->poll();
     int time = clockWrapper->getTime();
-//    time+=8000;
     ledWrapper->setTime(time);
     alexaWrapper->loop();
     storageWrapper->loop();
     ledWrapper->loop();
     gradientHelper-> loop();
-//    if(needRestart(time) && storageWrapper->isSafeToRestart()){
-//        restartController();
-//    }
+    if(needRestart(time) && storageWrapper->isSafeToRestart()){
+        restartController();
+    }
     if(DEBUG_ENABLED){
         ledWrapper->printStat();
         storageWrapper->printState();
