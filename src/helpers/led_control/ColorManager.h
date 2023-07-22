@@ -28,6 +28,7 @@ private:
     CRGB blackColor;
     ColorStatus primaryColorStatus;
     bool stateUpdated;
+    bool blockUpdates;
     ColorManager();
     void loadSavedValues();
     CRGB getStaticOnColor();
@@ -44,7 +45,6 @@ public:
     static ColorManager* getColorManagerInstance();
     int getBrightness();
     int* getColor();
-    char* getStringColorMode();
     void updateTemporary(ColorStatus temporaryColorStatus);
     void rollbackTemporaryChanges();
     void loop();

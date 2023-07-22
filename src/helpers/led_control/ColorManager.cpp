@@ -41,11 +41,15 @@ ColorManager::ColorManager() {
     fillColorArray(primaryColorStatus.staticColorRgb, 3, 255);
     primaryColorStatus.brightness = 128;
     primaryColorStatus.mode = COLOR_MANAGER_MODE_DEFAULT;
+    blockUpdates = false;
     loadSavedValues();
-    MqttClientWrapper::getMqttInstance()->registerCallback(COLOR_MODE_CONTROL_MQTT_CMD, updateColorModeMqtt);
+    MqttClientWrapper::getMqttInstance()->registerCallback(COLOR_MODE_CONTROL_MQTT_CMD, ColorManager::updateColorModeMqtt);
 }
 
 void ColorManager::setRgbColor(int r, int g, int b) {
+    if(blockUpdates){
+        return;
+    }
     primaryColorStatus.staticColorRgb[0]=r;
     primaryColorStatus.staticColorRgb[1]=g;
     primaryColorStatus.staticColorRgb[2]=b;
@@ -60,6 +64,9 @@ void ColorManager::setRgbColor(int r, int g, int b) {
 }
 
 void ColorManager::setBrightness(int b) {
+    if(blockUpdates){
+        return;
+    }
     primaryColorStatus.brightness = b;
     stateUpdated = true;
     StorageWrapper::getStorageWrapper()->setKey(PARAM_BRIGHTNESS_VAL, primaryColorStatus.brightness);
@@ -80,6 +87,9 @@ bool ColorManager::needsToPublishUpdate() {
 }
 
 void ColorManager::updateColorMode(int m) {
+    if(blockUpdates){
+        return;
+    }
     primaryColorStatus.mode = m % COLOR_MANAGER_MODES_LEN;
     stateUpdated = true;
     StorageWrapper::getStorageWrapper()->setKey(CLOCK_UPDATE_PARAM_COLOR_MODE, primaryColorStatus.mode);
@@ -117,16 +127,13 @@ int *ColorManager::getColor() {
     return primaryColorStatus.staticColorRgb;
 }
 
-char *ColorManager::getStringColorMode() {
-    return "";
-}
 
 CRGB ColorManager::getStaticOnColor() {
     return CRGB(primaryColorStatus.staticColorRgb[0], primaryColorStatus.staticColorRgb[1], primaryColorStatus.staticColorRgb[2]);
 }
 
 void ColorManager::loop() {
-
+    GradientHelper::getGradientHelperInstance()->loop();
 }
 
 void ColorManager::updateColorModeMqtt(char *topic, DynamicJsonDocument* doc, char *rawData) {
@@ -145,10 +152,12 @@ void ColorManager::updateColorModeMqtt(char *topic, DynamicJsonDocument* doc, ch
 
 void ColorManager::rollbackTemporaryChanges() {
     primaryColorStatus = previousColorMode;
+    blockUpdates = false;
 }
 
 void ColorManager::updateTemporary(ColorStatus temporaryColorStatus) {
     previousColorMode = primaryColorStatus;
     primaryColorStatus = temporaryColorStatus;
+    blockUpdates = true;
 }
 

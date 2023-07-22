@@ -30,7 +30,6 @@
 #define MSG_PARAM_TIME "time"
 
 #define MSG_PARAM_MSG_BINARY_VAL "dataString"
-//#define MSG_PARAM_MSG_BINARY_LEN "dataLen"
 #define MSG_PARAM_DOT_ENABLED "dotEnabled"
 
 
@@ -55,7 +54,7 @@ public:
 };
 
 class CustomMessage {
-public:
+private:
     std::queue<MessageUnit*> messageSegmentQueue;
     ColorStatus messageColorStatus;
     int colorMode;
@@ -69,12 +68,12 @@ public:
     bool isBlinkOff();
     bool parseMessageUnits(DynamicJsonDocument* doc);
     void initializeSetup();
-    void rollbackWatch();
     bool initializedColorManager = false;
     void displayUnit(MessageUnit* messageUnit);
     void removeInValid();
-//public:
+public:
     int startTime;
+    void rollbackWatch();
     void loop();
     bool parseMessage(DynamicJsonDocument* doc);
     bool isValid();

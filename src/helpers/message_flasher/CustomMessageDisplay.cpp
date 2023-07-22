@@ -11,6 +11,8 @@ void CustomMessageDisplay::mqttCallback(char *topic, DynamicJsonDocument *doc, c
         Serial.println("Added new Custom message from ");
         Serial.println(customMessage->isValid());
         Serial.println(customMessage->getFramesLeft());
+    }else{
+        Serial.println("Failed parsing message");
     }
 }
 
@@ -47,6 +49,7 @@ void CustomMessageDisplay::removeInvalid() {
         if(!messagesToShow.front()->isValid()){
             CustomMessage* message = messagesToShow.front();
             messagesToShow.pop();
+            message->rollbackWatch();
             free(message);
         } else{
             break;

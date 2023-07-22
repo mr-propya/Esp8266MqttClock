@@ -12,23 +12,27 @@ bool CustomMessage::parseMessage(DynamicJsonDocument *doc) {
     totalTime = (*doc)[MSG_PARAM_TIME];
     if(doc->containsKey(MSG_PARAM_COLOR_MODE)) {
         const char* colorModeFromJson = (const char*)(*doc)[MSG_PARAM_COLOR_MODE];
+        Serial.print("Color mode from JSON ");
+        Serial.println(colorModeFromJson);
         if(strcmp(colorModeFromJson, MSG_PARAM_COLOR_MODE_VAL_PALETTE) == 0){
             colorMode = COLOR_MANAGER_MODE_PALETTE;
             if(doc->containsKey(MSG_PARAM_PALETTE_INDEX)){
                 paletteIndex = (*doc)[MSG_PARAM_PALETTE_INDEX];
             }
         } else if(strcmp(colorModeFromJson, MSG_PARAM_COLOR_MODE_VAL_RGB) == 0){
+            Serial.println("Setting up RGB mode");
             colorMode = COLOR_MANAGER_MODE_RGB;
             if(doc->containsKey(MSG_PARAM_COLOR_RGB)){
                 rgb[0] = (*doc)[MSG_PARAM_COLOR_RGB][MSG_PARAM_COLOR_RGB_R];
                 rgb[1] = (*doc)[MSG_PARAM_COLOR_RGB][MSG_PARAM_COLOR_RGB_G];
                 rgb[2] = (*doc)[MSG_PARAM_COLOR_RGB][MSG_PARAM_COLOR_RGB_B];
+                Serial.println(rgb[0]);
             }
         } else if (strcmp(colorModeFromJson, MSG_PARAM_COLOR_MODE_VAL_PALETTE_SHUFFLE) == 0){
             colorMode = COLOR_MANAGER_MODE_PALETTE_SHUFFLE;
         }
     }
-    if(colorMode = -1){
+    if(colorMode == -1){
         colorMode = COLOR_MANAGER_MODE_DEFAULT;
     }
     if(doc->containsKey(MSG_PARAM_BRIGHTNESS)){
@@ -51,19 +55,8 @@ bool CustomMessage::parseMessage(DynamicJsonDocument *doc) {
 }
 
 bool CustomMessage::parseMessageUnits(DynamicJsonDocument* doc) {
-    Serial.println("Parsing units");
-    Serial.println(totalTime);
     JsonArray arrTemp = (*doc)[MSG_PARAM_MSG_BINARY_VAL].as<JsonArray>();
     int len = arrTemp.size();
-    int* temp = (int*)malloc(sizeof(int) * len);
-    int i=0;
-    for (JsonVariant value : arrTemp) {
-        Serial.println(value.as<int>());
-        temp[i]= value.as<int>();
-        i++;
-    }
-    Serial.println("Done Parsing units");
-
     int framesRequired = 1;
     if (len > 4){
         framesRequired = len - 3;
@@ -73,13 +66,23 @@ bool CustomMessage::parseMessageUnits(DynamicJsonDocument* doc) {
     if(!isValidData){
         return false;
     }
+
+
+    int* temp = (int*)malloc(sizeof(int) * len);
+    int i=0;
+    for (JsonVariant value : arrTemp) {
+        Serial.println(value.as<int>());
+        temp[i]= value.as<int>();
+        i++;
+    }
+    Serial.println("Done Parsing units");
+
+
     for (int i = 0; i < framesRequired; i++){
         MessageUnitWithData* messageUnit = new MessageUnitWithData();
         messageUnit->loadFromArray(i, min(len, 4), temp);
         messageUnit->secondToShow = frameDuration;
         messageSegmentQueue.push(messageUnit);
-        Serial.println("Writing msg data as ");
-        Serial.println(messageUnit->getDisplayChar(0));
     }
     free(temp);
     return isValidData;
@@ -91,20 +94,16 @@ bool CustomMessage::isValid() {
 }
 
 void CustomMessage::loop() {
-    while (isValid()){
+    if (isValid()){
         initializeSetup();
         if(isBlinkOff()){
-            Serial.println("Blink off");
             MessageUnit blinkUnit;
             blinkUnit.secondToShow = blinkFor;
             displayUnit(&blinkUnit);
         }else{
-            Serial.print(" Data is ");
-            Serial.println(messageSegmentQueue.front()->getDisplayChar(0));
             displayUnit(messageSegmentQueue.front());
         }
     }
-    rollbackWatch();
 }
 
 void CustomMessage::rollbackWatch() {
@@ -118,6 +117,8 @@ void CustomMessage::initializeSetup() {
     }
     ColorManager* colorManager = ColorManager::getColorManagerInstance();
     messageColorStatus.mode = colorMode;
+    Serial.println("Setting up color mode");
+    Serial.println(colorMode);
     messageColorStatus.brightness = brightness;
     messageColorStatus.staticColorRgb = rgb;
     messageColorStatus.paletteIdx = paletteIndex;
@@ -127,8 +128,6 @@ void CustomMessage::initializeSetup() {
 }
 
 bool CustomMessage::isBlinkOff() {
-    Serial.println("Blink after ");
-    Serial.println(blinkAfter);
     if(blinkAfter == -1)
         return false;
     int cycleLen = blinkFor + blinkAfter;
@@ -139,10 +138,6 @@ bool CustomMessage::isBlinkOff() {
 
 void CustomMessage::displayUnit(MessageUnit* messageUnit) {
     messageUnit->startDisplay();
-    Serial.print(messageUnit->getDisplayChar(0));
-    Serial.print(messageUnit->isOn);
-    Serial.print(messageUnit->startTime);
-    Serial.println(" data");
     LEDWrapper* ledWrapperInstance = LEDWrapper::getLedWrapperInstance();
     for (int i = 0; i < 4; i++){
         ledWrapperInstance->setDigit(i+1, messageUnit->getDisplayChar(i), false);
@@ -156,11 +151,7 @@ void CustomMessage::displayUnit(MessageUnit* messageUnit) {
 void CustomMessage::removeInValid() {
     while (!messageSegmentQueue.empty()){
         if(!messageSegmentQueue.front()->isValid()){
-            Serial.println("Removing expired segment");
             MessageUnit* msgPtr = messageSegmentQueue.front();
-            Serial.println(msgPtr->startTime);
-            Serial.println(msgPtr->secondToShow);
-            Serial.println(millis());
             free(msgPtr);
             messageSegmentQueue.pop();
         }else{
@@ -175,19 +166,12 @@ int CustomMessage::getFramesLeft() {
 
 
 bool MessageUnit::isValid() {
-    Serial.print("Is valid message unit ");
-    Serial.print(startTime);
-    Serial.print("  ");
-    Serial.print(secondToShow);
-    Serial.print("  ");
-    Serial.println(millis());
     return startTime == -1 || (startTime + secondToShow * 1000 ) > millis() ;
 }
 
 void MessageUnit::startDisplay() {
     if(startTime == -1){
         startTime = millis();
-        Serial.println("Starting message unit start time");
     }
 }
 

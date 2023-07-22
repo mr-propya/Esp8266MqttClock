@@ -8,9 +8,7 @@
 #include "helpers/clock/clockWrapper.h"
 #include "helpers/led_control/ledControlWrapper.h"
 #include "helpers/message_flasher/CustomMessageDisplay.h"
-//#include "helpers/led_control/ColorPaletteHelper.h"
-#include <WiFiUdp.h>
-#include <stack>
+#include "helpers/led_control/ColorManager.h"
 
 #if defined (ARDUINO_ARCH_ESP8266)
 #include "../.pio/libdeps/nodemcuv2/WiFiManager/WiFiManager.h"
@@ -19,21 +17,9 @@
 #endif
 
 
-#define LED_PER_DIGIT_SEGMENT 7
-#define SEGMENTS_PER_DIGIT 7
-#define LED_PER_DOT_SEGMENT 4
-#define POSITION_DOT_SEGMENT 2
-#define SEGMENTS_PER_DOT 2
-#define DOT_BLINK_INTERVAL 2
-
 #define BAUD_RATE 115200
 #define WIFI_SETUP_SSID "NodeMCU-Setup"
 #define WIFI_SETUP_PASSWORD "testSetup"
-#define NTP_POLL_INTERVAL 5
-#define LED_TOTAL (LED_PER_DIGIT_SEGMENT*SEGMENTS_PER_DIGIT* 4 + SEGMENTS_PER_DOT*LED_PER_DOT_SEGMENT)
-#define LED_CHANNELS 4
-
-
 
 #define HTTP_POLL_BASE_URL "https://us-central1-customwatch-f5c4a.cloudfunctions.net/getData"
 
@@ -46,7 +32,7 @@ MqttClientWrapper* mqttClientWrapper;
 AlexaWrapper* alexaWrapper;
 GradientHelper* gradientHelper;
 CustomMessageDisplay* customMessageDisplay;
-
+ColorManager* colorManager;
 
 int brightness = 128;
 
@@ -131,6 +117,7 @@ void initialize(){
     alexaWrapper = AlexaWrapper::getAlexaWrapperInstance();
     gradientHelper = GradientHelper::getGradientHelperInstance();
     customMessageDisplay = CustomMessageDisplay::getCustomMessageInstance();
+    colorManager = ColorManager::getColorManagerInstance();
 }
 
 void setup() {
@@ -148,7 +135,7 @@ bool RESTART_FLAG_GLOBAL = false;
 bool needRestart(int time){
     int mins = time %100;
     int hrs = time/100;
-    if(hrs == 1 && mins ==1){
+    if( (hrs == 1 && mins ==1) || (ESP.getFreeHeap() < 2000)){
         RESTART_FLAG_GLOBAL = true;
     }
     return RESTART_FLAG_GLOBAL;
@@ -159,27 +146,23 @@ void restartController(){
 }
 long heapAvail = -1;
 void loop(){
-    while (customMessageDisplay->hasMessage()){
-        CustomMessage* msg = customMessageDisplay->getTop();
-        if(msg == nullptr){
-            break;
-        }
-        Serial.print(msg->brightness);
-        msg->loop();
-    }
     mqttClientWrapper->poll();
-    int time = clockWrapper->getTime();
-    ledWrapper->setTime(time);
-    alexaWrapper->loop();
-    storageWrapper->loop();
-    ledWrapper->loop();
-    gradientHelper-> loop();
-    if(needRestart(time) && storageWrapper->isSafeToRestart()){
-        restartController();
-    }
-    if(DEBUG_ENABLED){
-        ledWrapper->printStat();
-        storageWrapper->printState();
+    colorManager->loop();
+    if (customMessageDisplay->hasMessage()){
+        CustomMessage* msg = customMessageDisplay->getTop();
+        if(msg != nullptr){
+            msg->loop();
+        }
+    }else {
+        int time = clockWrapper->getTime();
+        ledWrapper->setTime(time);
+        alexaWrapper->loop();
+        storageWrapper->loop();
+        ledWrapper->loop();
+        gradientHelper->loop();
+        if (needRestart(time) && storageWrapper->isSafeToRestart()) {
+            restartController();
+        }
     }
     if(heapAvail != ESP.getFreeHeap()){
         mqttClientWrapper->publish(HEAP_UTILIZATION_DATA_MQTT_TOPIC, std::to_string(ESP.getFreeHeap()).data(), false);
