@@ -259,7 +259,7 @@ void LEDWrapper::timePadding(bool shouldAddPadding) {
 
 void LEDWrapper::initializeFastLedIfNot() {
     if(!isFastLedInitialized){
-        FastLED.addLeds<WS2812, D6, GRB>(LED, LED_TOTAL).setCorrection(TypicalLEDStrip);
+        FastLED.addLeds<WS2812, 5, GRB>(LED, LED_TOTAL).setCorrection(TypicalLEDStrip);
     }
     isFastLedInitialized = true;
 }

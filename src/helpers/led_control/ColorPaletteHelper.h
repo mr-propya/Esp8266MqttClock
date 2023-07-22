@@ -5,8 +5,12 @@
 #ifndef CUSTOMCLOCKNEW_COLORPALETTEHELPER_H
 #define CUSTOMCLOCKNEW_COLORPALETTEHELPER_H
 
-
-#include "../../../.pio/libdeps/nodemcuv2/FastLED/src/FastLED.h"
+#include <vector>
+#if defined (ARDUINO_ARCH_ESP8266)
+#include "../.pio/libdeps/nodemcuv2/FastLED/src/FastLED.h"
+#elif defined(ESP32)
+#include "../.pio/libdeps/esp32/FastLED/src/FastLED.h"
+#endif
 
 #define GRADIENT_SHIFT_SPEED .05
 

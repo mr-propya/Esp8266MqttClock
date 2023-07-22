@@ -8,8 +8,6 @@
 #include "helpers/clock/clockWrapper.h"
 #include "helpers/led_control/ledControlWrapper.h"
 //#include "helpers/led_control/ColorPaletteHelper.h"
-#include <WiFiUdp.h>
-#include <stack>
 
 #if defined (ARDUINO_ARCH_ESP8266)
 #include "../.pio/libdeps/nodemcuv2/WiFiManager/WiFiManager.h"
@@ -30,11 +28,9 @@
 #define WIFI_SETUP_PASSWORD "testSetup"
 #define NTP_POLL_INTERVAL 5
 #define LED_TOTAL (LED_PER_DIGIT_SEGMENT*SEGMENTS_PER_DIGIT* 4 + SEGMENTS_PER_DOT*LED_PER_DOT_SEGMENT)
-#define LED_CHANNELS 4
 
 
 
-#define HTTP_POLL_BASE_URL "https://us-central1-customwatch-f5c4a.cloudfunctions.net/getData"
 
 WiFiManager wifiManager;
 
@@ -115,9 +111,6 @@ void initializeWifi(){
     while(!wifiManager.autoConnect(WIFI_SETUP_SSID, WIFI_SETUP_PASSWORD)){
         delay(5000);
     }
-    Serial.print("Wifi internal");
-    Serial.print(WiFiClient().localIP().toString());
-    Serial.println(WiFiClient().connected());
 }
 
 void initialize(){
@@ -135,10 +128,6 @@ void setup() {
     Serial.print("Reading");
     storageWrapper = StorageWrapper::getStorageWrapper();
     initializeWifi();
-    while (WiFi.status() != WL_CONNECTED) {
-        delay(500);
-        Serial.println("Waiting for wifi to be connected");
-    }
     delay(1000);
     initialize();
     ledWrapper->shouldBlink(true);

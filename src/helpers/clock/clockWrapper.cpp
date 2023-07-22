@@ -2,14 +2,8 @@
 // Created by Tamse, Mahesh on 16/04/23.
 //
 
-#include "../../../.pio/libdeps/nodemcuv2/NTPClient/NTPClient.h"
 #include "clockWrapper.h"
-#include "constants.h"
-#include <WiFiUdp.h>
-#include <string>
-#include "helpers/storage/storageWrapper.h"
-#include "helpers/mqtt/mqttClient.h"
-#include <../.pio/libdeps/nodemcuv2/ArduinoJson/src/ArduinoJson.h>
+
 
 
 #define CLOCK_CONTROL_MQTT_CMD "clock/cmd/"

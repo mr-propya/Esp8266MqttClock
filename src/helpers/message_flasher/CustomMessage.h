@@ -6,13 +6,17 @@
 #define CUSTOMCLOCKNEW_CUSTOMMESSAGE_H
 
 #include <queue>
-#include "../../../.pio/libdeps/nodemcuv2/ArduinoJson/src/ArduinoJson.h"
 #include "../led_control/ColorManager.h"
 #include "string"
 #include <cmath>
 #include "../led_control/ledControlWrapper.h"
 #include "./constants.h"
 
+#if defined (ARDUINO_ARCH_ESP8266)
+#include <../.pio/libdeps/nodemcuv2/ArduinoJson/src/ArduinoJson.h>
+#elif defined(ESP32)
+#include <../.pio/libdeps/esp32/ArduinoJson/src/ArduinoJson.h>
+#endif
 #define MSG_PARAM_COLOR_MODE "color_mode"
 
 #define MSG_PARAM_COLOR_MODE_VAL_PALETTE "palette"

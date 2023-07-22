@@ -26,7 +26,6 @@
 #define LED_CONTROL_MQTT_STAT "status/led/"
 #define COLOR_MODE_CONTROL_MQTT_CMD "cmd/colorMode/"
 #define CUSTOM_MSG_CONTROL_MQTT_CMD "cmd/customMsg/"
-#define COLOR_MODE_CONTROL_MQTT_STAT "status/colorMode/"
 
 // ----------- LED Constants ----------- //
 #define LED_PER_DIGIT_SEGMENT 7

@@ -4,7 +4,6 @@
 
 #include "mqttClient.h"
 
-
 MqttClientWrapper* mqttInstance = nullptr;
 
 
@@ -13,11 +12,8 @@ MqttClientWrapper::MqttClientWrapper(char *id) {
     deviceId = (char*) malloc(sizeof(char) * (len+1));
     strcpy(deviceId, id);
     deviceId[len] = '\0';
-
-    BearSSL::WiFiClientSecure *bear = new BearSSL::WiFiClientSecure();
-    bear->setInsecure();
-
-    mqttClient = new PubSubClient(*bear);
+    bear.ca
+    mqttClient = new PubSubClient(bear);
     mqttClient->setServer(MQTT_SERVER_HOST, MQTT_SERVER_PORT);
     mqttClient->setCallback(callBack);
     mqttClient->setKeepAlive(GLOBAL_MAX_LOOP_TIMEOUT);
@@ -30,10 +26,8 @@ bool MqttClientWrapper::connectToServer() {
 
     while (tryCounter <= MQTT_SERVER_CONNECT_RETRY && !mqttClient->connected()){
         tryCounter+=1;
-        Serial.println("Wifi state ");
-        Serial.println(WiFiClient().connected());
         Serial.println("Trying to connect to MQTT server");
-        int response = mqttClient->connect(deviceId,MQTT_SERVER_USER, MQTT_SERVER_PASSWORD);
+        bool response = mqttClient->connect("Test",MQTT_SERVER_USER, MQTT_SERVER_PASSWORD);
         Serial.print("MQTT server current response code");
         Serial.println(response);
         Serial.println(mqttClient->state());
@@ -84,7 +78,7 @@ void MqttClientWrapper::callBack(char *topic, byte *payload, int len) {
         if(interestedTopic == nullptr || strlen(interestedTopic)==0 || topicPath.rfind(interestedTopic) == 0){
             Serial.print("Notifying subscriber with prefix ");
             Serial.println(interestedTopic == nullptr ? "NULL_PTR" : interestedTopic);
-            mqttInstance->subscriptionTopicCallback[i](topicPath.data(), &doc, data);
+            mqttInstance->subscriptionTopicCallback[i]((char*)topicPath.data(), &doc, data);
         }
     }
 
@@ -93,6 +87,9 @@ void MqttClientWrapper::callBack(char *topic, byte *payload, int len) {
 }
 
 void MqttClientWrapper::poll() {
+    while (!mqttClient->connected()){
+        connectToServer();
+    }
     mqttClient->loop();
 }
 
@@ -103,7 +100,7 @@ void MqttClientWrapper::registerCallback(char* topicPrefix, std::function<void(c
 
 MqttClientWrapper *MqttClientWrapper::getMqttInstance() {
     if(mqttInstance== nullptr)
-        mqttInstance = new MqttClientWrapper(StorageWrapper::getStorageWrapper()->getKey(PARAM_DEVICE_ID));
+        mqttInstance = new MqttClientWrapper("Test");
     return mqttInstance;
 }
 
