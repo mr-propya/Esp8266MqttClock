@@ -15,11 +15,14 @@
 #include <Arduino.h>
 #include <cstdlib>
 #include <CertStoreBearSSL.h>
+#include "ESP8266WiFi.h"
 
 
 class MqttClientWrapper{
 
 private:
+    BearSSL::WiFiClientSecure bear;
+    WiFiClient baseClient;
     char *deviceId;
     PubSubClient *mqttClient;
     std::vector<char*> subscriptionTopicPrefix;

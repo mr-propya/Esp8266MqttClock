@@ -14,10 +14,10 @@ MqttClientWrapper::MqttClientWrapper(char *id) {
     strcpy(deviceId, id);
     deviceId[len] = '\0';
 
-    BearSSL::WiFiClientSecure *bear = new BearSSL::WiFiClientSecure();
-    bear->setInsecure();
-
-    mqttClient = new PubSubClient(*bear);
+    bear.setInsecure();
+    Serial.println("Wifi state before");
+    Serial.println(baseClient.connected());
+    mqttClient = new PubSubClient(bear);
     mqttClient->setServer(MQTT_SERVER_HOST, MQTT_SERVER_PORT);
     mqttClient->setCallback(callBack);
     mqttClient->setKeepAlive(GLOBAL_MAX_LOOP_TIMEOUT);
@@ -33,7 +33,13 @@ bool MqttClientWrapper::connectToServer() {
         Serial.println("Wifi state ");
         Serial.println(WiFiClient().connected());
         Serial.println("Trying to connect to MQTT server");
-        int response = mqttClient->connect(deviceId,MQTT_SERVER_USER, MQTT_SERVER_PASSWORD);
+        Serial.println("Wifi state before");
+//        while (WL_CONNECTED != WiFi.status()){
+//
+//        }
+        Serial.println(baseClient.connected());
+        Serial.println(WiFi.status());
+        int response = mqttClient->connect("THigdsmyTestDgffgfgevuce",MQTT_SERVER_USER, MQTT_SERVER_PASSWORD);
         Serial.print("MQTT server current response code");
         Serial.println(response);
         Serial.println(mqttClient->state());

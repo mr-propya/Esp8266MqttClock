@@ -123,11 +123,11 @@ void initializeWifi(){
 void initialize(){
     Serial.println(ESP.getFreeHeap());
 //    MQTT should always be initialized first bcoz there might be dependencies on it for below wrappers
-    clockWrapper = ClockWrapper::getClockWrapperInstance();
+//    clockWrapper = ClockWrapper::getClockWrapperInstance();
     mqttClientWrapper = MqttClientWrapper::getMqttInstance();
-    ledWrapper = LEDWrapper::getLedWrapperInstance();
-    alexaWrapper = AlexaWrapper::getAlexaWrapperInstance();
-    gradientHelper = GradientHelper::getGradientHelperInstance();
+//    ledWrapper = LEDWrapper::getLedWrapperInstance();
+//    alexaWrapper = AlexaWrapper::getAlexaWrapperInstance();
+//    gradientHelper = GradientHelper::getGradientHelperInstance();
 }
 
 void setup() {
@@ -138,7 +138,7 @@ void setup() {
     
     delay(1000);
     initialize();
-    ledWrapper->shouldBlink(true);
+//    ledWrapper->shouldBlink(true);
 }
 
 bool RESTART_FLAG_GLOBAL = false;
@@ -156,19 +156,20 @@ void restartController(){
 }
 
 void loop(){
-    mqttClientWrapper->poll();
-    int time = clockWrapper->getTime();
-    ledWrapper->setTime(time);
-    alexaWrapper->loop();
-    storageWrapper->loop();
-    ledWrapper->loop();
-    gradientHelper-> loop();
-    if(needRestart(time) && storageWrapper->isSafeToRestart()){
-        restartController();
-    }
-    if(DEBUG_ENABLED){
-        ledWrapper->printStat();
-        storageWrapper->printState();
-    }
+//    mqttClientWrapper->poll();
+//    int time = clockWrapper->getTime();
+//    ledWrapper->setTime(time);
+//    alexaWrapper->loop();
+//    storageWrapper->loop();
+//    ledWrapper->loop();
+//    gradientHelper-> loop();
+//    if(needRestart(time) && storageWrapper->isSafeToRestart()){
+//        restartController();
+//    }
+//    if(DEBUG_ENABLED){
+//        ledWrapper->printStat();
+//        storageWrapper->printState();
+//    }
+    Serial.println(ESP.getFreeHeap());
 }
 

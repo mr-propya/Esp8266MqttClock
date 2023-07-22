@@ -8,8 +8,6 @@
 #include <queue>
 #include "../../../.pio/libdeps/nodemcuv2/ArduinoJson/src/ArduinoJson.h"
 #include "../led_control/ColorManager.h"
-#include "string"
-#include <cmath>
 #include "../led_control/ledControlWrapper.h"
 #include "./constants.h"
 

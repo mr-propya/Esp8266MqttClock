@@ -14,7 +14,7 @@
 
 
 // ----------- MQTT Constants ----------- //
-#define MQTT_SERVER_HOST "43d985e2b31746e6980bc97ba5b1d77d.s1.eu.hivemq.cloud"
+#define MQTT_SERVER_HOST "hf368902.ala.us-east-1.emqxsl.com"
 #define MQTT_SERVER_PORT 8883
 #define MQTT_SERVER_USER "nodeUser"
 #define MQTT_SERVER_PASSWORD "nodePasswd"
