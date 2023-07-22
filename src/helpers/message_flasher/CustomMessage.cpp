@@ -42,7 +42,7 @@ bool CustomMessage::parseMessage(DynamicJsonDocument *doc) {
     blinkFor = -1;
     blinkAfter = -1;
     if(doc->containsKey(MSG_PARAM_BLINK_FOR) && doc->containsKey(MSG_PARAM_BLINK_AFTER)){
-        if((*doc)[MSG_PARAM_BLINK_FOR] > 0 && (*doc)[MSG_PARAM_BLINK_AFTER]){
+        if((*doc)[MSG_PARAM_BLINK_FOR] > 0 && (*doc)[MSG_PARAM_BLINK_AFTER] > 0){
             blinkFor = (*doc)[MSG_PARAM_BLINK_FOR];
             blinkAfter = (*doc)[MSG_PARAM_BLINK_AFTER];
         }
@@ -51,59 +51,57 @@ bool CustomMessage::parseMessage(DynamicJsonDocument *doc) {
 }
 
 bool CustomMessage::parseMessageUnits(DynamicJsonDocument* doc) {
-    int len = 0;
-    for (JsonVariant value : ((*doc)[MSG_PARAM_MSG_BINARY_VAL]).to<JsonArray>()) {
-        len++;
-    }
+    Serial.println("Parsing units");
+    Serial.println(totalTime);
+    JsonArray arrTemp = (*doc)[MSG_PARAM_MSG_BINARY_VAL].as<JsonArray>();
+    int len = arrTemp.size();
     int* temp = (int*)malloc(sizeof(int) * len);
     int i=0;
-    for (JsonVariant value : ((*doc)[MSG_PARAM_MSG_BINARY_VAL]).to<JsonArray>()) {
+    for (JsonVariant value : arrTemp) {
+        Serial.println(value.as<int>());
         temp[i]= value.as<int>();
         i++;
     }
+    Serial.println("Done Parsing units");
 
     int framesRequired = 1;
     if (len > 4){
-        framesRequired = len - 4;
+        framesRequired = len - 3;
     }
     int frameDuration = floor(totalTime / framesRequired);
+    bool isValidData = frameDuration > 0 && (blinkFor == -1 || blinkFor < frameDuration);
+    if(!isValidData){
+        return false;
+    }
     for (int i = 0; i < framesRequired; i++){
-        MessageUnitWithData messageUnit;
-        messageUnit.loadFromArray(i, min(len, 4), temp);
-        messageUnit.secondToShow = frameDuration;
+        MessageUnitWithData* messageUnit = new MessageUnitWithData();
+        messageUnit->loadFromArray(i, min(len, 4), temp);
+        messageUnit->secondToShow = frameDuration;
         messageSegmentQueue.push(messageUnit);
+        Serial.println("Writing msg data as ");
+        Serial.println(messageUnit->getDisplayChar(0));
     }
     free(temp);
-    return frameDuration > 0 && (blinkFor == -1 || blinkFor < frameDuration);
+    return isValidData;
 }
 
 bool CustomMessage::isValid() {
-    while (!messageSegmentQueue.empty()){
-        if(!messageSegmentQueue.front().isValid()){
-            messageSegmentQueue.pop();
-            continue;
-        }
-        return true;
-    }
-    return false;
+    removeInValid();
+    return !messageSegmentQueue.empty();
 }
 
 void CustomMessage::loop() {
     while (isValid()){
         initializeSetup();
         if(isBlinkOff()){
+            Serial.println("Blink off");
             MessageUnit blinkUnit;
             blinkUnit.secondToShow = blinkFor;
-            displayUnit(blinkUnit);
+            displayUnit(&blinkUnit);
         }else{
-            while (!messageSegmentQueue.empty()){
-                if(!messageSegmentQueue.front().isValid()){
-                    messageSegmentQueue.pop();
-                    continue;
-                }
-                displayUnit(messageSegmentQueue.front());
-                break;
-            }
+            Serial.print(" Data is ");
+            Serial.println(messageSegmentQueue.front()->getDisplayChar(0));
+            displayUnit(messageSegmentQueue.front());
         }
     }
     rollbackWatch();
@@ -129,6 +127,8 @@ void CustomMessage::initializeSetup() {
 }
 
 bool CustomMessage::isBlinkOff() {
+    Serial.println("Blink after ");
+    Serial.println(blinkAfter);
     if(blinkAfter == -1)
         return false;
     int cycleLen = blinkFor + blinkAfter;
@@ -137,26 +137,57 @@ bool CustomMessage::isBlinkOff() {
     return cyclePosition > blinkAfter;
 }
 
-void CustomMessage::displayUnit(MessageUnit messageUnit) {
-    messageUnit.startDisplay();
+void CustomMessage::displayUnit(MessageUnit* messageUnit) {
+    messageUnit->startDisplay();
+    Serial.print(messageUnit->getDisplayChar(0));
+    Serial.print(messageUnit->isOn);
+    Serial.print(messageUnit->startTime);
+    Serial.println(" data");
     LEDWrapper* ledWrapperInstance = LEDWrapper::getLedWrapperInstance();
     for (int i = 0; i < 4; i++){
-        ledWrapperInstance->setDigit(i, messageUnit.getDisplayChar(i), false);
+        ledWrapperInstance->setDigit(i+1, messageUnit->getDisplayChar(i), false);
     }
     for (int i = 0; i < 2; i++){
-        ledWrapperInstance->setDotSegment(i, dotSegmentOn && messageUnit.isOn);
+        ledWrapperInstance->setDotSegment(i+1, dotSegmentOn && messageUnit->isOn);
     }
     ledWrapperInstance->update();
 }
 
+void CustomMessage::removeInValid() {
+    while (!messageSegmentQueue.empty()){
+        if(!messageSegmentQueue.front()->isValid()){
+            Serial.println("Removing expired segment");
+            MessageUnit* msgPtr = messageSegmentQueue.front();
+            Serial.println(msgPtr->startTime);
+            Serial.println(msgPtr->secondToShow);
+            Serial.println(millis());
+            free(msgPtr);
+            messageSegmentQueue.pop();
+        }else{
+            break;
+        }
+    }
+}
+
+int CustomMessage::getFramesLeft() {
+    return messageSegmentQueue.size();
+}
+
 
 bool MessageUnit::isValid() {
-    return startTime == -1 || (startTime + secondToShow * 1000 ) < millis() ;
+    Serial.print("Is valid message unit ");
+    Serial.print(startTime);
+    Serial.print("  ");
+    Serial.print(secondToShow);
+    Serial.print("  ");
+    Serial.println(millis());
+    return startTime == -1 || (startTime + secondToShow * 1000 ) > millis() ;
 }
 
 void MessageUnit::startDisplay() {
     if(startTime == -1){
         startTime = millis();
+        Serial.println("Starting message unit start time");
     }
 }
 

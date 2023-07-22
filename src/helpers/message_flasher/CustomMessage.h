@@ -36,8 +36,8 @@
 
 class MessageUnit {
 protected:
-    long startTime =-1;
 public:
+    long startTime =-1;
     int secondToShow;
     bool isValid();
     void startDisplay();
@@ -55,8 +55,8 @@ public:
 };
 
 class CustomMessage {
-private:
-    std::queue<MessageUnit> messageSegmentQueue;
+public:
+    std::queue<MessageUnit*> messageSegmentQueue;
     ColorStatus messageColorStatus;
     int colorMode;
     int rgb[3];
@@ -67,16 +67,18 @@ private:
     int brightness;
     int totalTime;
     bool isBlinkOff();
-    int startTime;
     bool parseMessageUnits(DynamicJsonDocument* doc);
     void initializeSetup();
     void rollbackWatch();
     bool initializedColorManager = false;
-    void displayUnit(MessageUnit messageUnit);
-public:
+    void displayUnit(MessageUnit* messageUnit);
+    void removeInValid();
+//public:
+    int startTime;
     void loop();
     bool parseMessage(DynamicJsonDocument* doc);
     bool isValid();
+    int getFramesLeft();
 };
 
 

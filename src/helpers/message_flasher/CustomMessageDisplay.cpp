@@ -5,17 +5,20 @@
 #include "CustomMessageDisplay.h"
 
 void CustomMessageDisplay::mqttCallback(char *topic, DynamicJsonDocument *doc, char *rawData) {
-    CustomMessage customMessage;
-    if(customMessage.parseMessage(doc)){
+    CustomMessage* customMessage = new CustomMessage();
+    if(customMessage->parseMessage(doc)){
         CustomMessageDisplay::getCustomMessageInstance()->addMessageToDisplay(customMessage);
+        Serial.println("Added new Custom message from ");
+        Serial.println(customMessage->isValid());
+        Serial.println(customMessage->getFramesLeft());
     }
 }
 
 CustomMessageDisplay::CustomMessageDisplay() {
-    MqttClientWrapper::getMqttInstance()->registerCallback(CUSTOM_MSG_CONTROL_MQTT_CMD, mqttCallback);
+    MqttClientWrapper::getMqttInstance()->registerCallback(CUSTOM_MSG_CONTROL_MQTT_CMD, CustomMessageDisplay::mqttCallback);
 }
 
-void CustomMessageDisplay::addMessageToDisplay(CustomMessage msg) {
+void CustomMessageDisplay::addMessageToDisplay(CustomMessage* msg) {
     messagesToShow.push(msg);
 }
 
@@ -30,12 +33,23 @@ CustomMessageDisplay *CustomMessageDisplay::getCustomMessageInstance() {
 }
 
 bool CustomMessageDisplay::hasMessage() {
+    removeInvalid();
+    return !messagesToShow.empty();
+}
+
+CustomMessage* CustomMessageDisplay::getTop() {
+    removeInvalid();
+    return messagesToShow.empty() ? nullptr : messagesToShow.front();
+}
+
+void CustomMessageDisplay::removeInvalid() {
     while (!messagesToShow.empty()){
-        if(!messagesToShow.front().isValid()){
+        if(!messagesToShow.front()->isValid()){
+            CustomMessage* message = messagesToShow.front();
             messagesToShow.pop();
-            continue;
+            free(message);
+        } else{
+            break;
         }
-        return true;
     }
-    return false;
 }

@@ -14,7 +14,7 @@
 
 
 // ----------- MQTT Constants ----------- //
-#define MQTT_SERVER_HOST "hf368902.ala.us-east-1.emqxsl.com"
+#define MQTT_SERVER_HOST "43d985e2b31746e6980bc97ba5b1d77d.s1.eu.hivemq.cloud"
 #define MQTT_SERVER_PORT 8883
 #define MQTT_SERVER_USER "nodeUser"
 #define MQTT_SERVER_PASSWORD "nodePasswd"
@@ -26,7 +26,7 @@
 #define LED_CONTROL_MQTT_STAT "status/led/"
 #define COLOR_MODE_CONTROL_MQTT_CMD "cmd/colorMode/"
 #define CUSTOM_MSG_CONTROL_MQTT_CMD "cmd/customMsg/"
-#define COLOR_MODE_CONTROL_MQTT_STAT "status/colorMode/"
+#define HEAP_UTILIZATION_DATA_MQTT_TOPIC "status/heap/available"
 
 // ----------- LED Constants ----------- //
 #define LED_PER_DIGIT_SEGMENT 7

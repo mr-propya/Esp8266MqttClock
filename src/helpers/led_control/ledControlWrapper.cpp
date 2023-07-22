@@ -58,11 +58,10 @@ void LEDWrapper::setDotSegment(int segment, bool isOn) {
     segmentHead += LED_PER_DOT_SEGMENT * (segment -1);
     updateBulk(segmentHead, LED_PER_DOT_SEGMENT, isOn);
 }
-
+//Digit starts from 1
 void LEDWrapper::setDigit(int digit, int value, bool isNumber) {
     if(isNumber)
         value = DIGITS_TO_BINARY_MAPPINGS[value];
-
     int digitHead = (SEGMENTS_PER_DIGIT * LED_PER_DIGIT_SEGMENT) * (digit - 1);
     if(digit > POSITION_DOT_SEGMENT){
         digitHead += (LED_PER_DOT_SEGMENT * SEGMENTS_PER_DOT);

@@ -6,7 +6,6 @@
 #define CUSTOMCLOCKNEW_CUSTOMMESSAGEDISPLAY_H
 
 #include <queue>
-#include "iostream"
 #include "../../../.pio/libdeps/nodemcuv2/ArduinoJson/src/ArduinoJson.h"
 #include "../mqtt/mqttClient.h"
 #include "./CustomMessage.h"
@@ -16,13 +15,14 @@
 class CustomMessageDisplay {
 private:
     CustomMessageDisplay();
-    std::queue<CustomMessage> messagesToShow;
+    std::queue<CustomMessage*> messagesToShow;
     static void mqttCallback(char* topic, DynamicJsonDocument* doc, char* rawData);
-
+    void removeInvalid();
 public:
     bool hasMessage();
+    CustomMessage* getTop();
     static CustomMessageDisplay* getCustomMessageInstance();
-    void addMessageToDisplay(CustomMessage msg);
+    void addMessageToDisplay(CustomMessage* msg);
 };
 
 

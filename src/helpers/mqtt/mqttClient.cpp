@@ -13,11 +13,8 @@ MqttClientWrapper::MqttClientWrapper(char *id) {
     deviceId = (char*) malloc(sizeof(char) * (len+1));
     strcpy(deviceId, id);
     deviceId[len] = '\0';
-
-    bear.setInsecure();
-    Serial.println("Wifi state before");
-    Serial.println(baseClient.connected());
-    mqttClient = new PubSubClient(bear);
+    wiFiClientSecure.setInsecure();
+    mqttClient = new PubSubClient(wiFiClientSecure);
     mqttClient->setServer(MQTT_SERVER_HOST, MQTT_SERVER_PORT);
     mqttClient->setCallback(callBack);
     mqttClient->setKeepAlive(GLOBAL_MAX_LOOP_TIMEOUT);
@@ -26,7 +23,6 @@ MqttClientWrapper::MqttClientWrapper(char *id) {
 
 bool MqttClientWrapper::connectToServer() {
     int tryCounter = 0;
-    Serial.println(ESP.getFreeHeap());
 
     while (tryCounter <= MQTT_SERVER_CONNECT_RETRY && !mqttClient->connected()){
         tryCounter+=1;
@@ -34,12 +30,7 @@ bool MqttClientWrapper::connectToServer() {
         Serial.println(WiFiClient().connected());
         Serial.println("Trying to connect to MQTT server");
         Serial.println("Wifi state before");
-//        while (WL_CONNECTED != WiFi.status()){
-//
-//        }
-        Serial.println(baseClient.connected());
-        Serial.println(WiFi.status());
-        int response = mqttClient->connect("THigdsmyTestDgffgfgevuce",MQTT_SERVER_USER, MQTT_SERVER_PASSWORD);
+        int response = mqttClient->connect(deviceId,MQTT_SERVER_USER, MQTT_SERVER_PASSWORD);
         Serial.print("MQTT server current response code");
         Serial.println(response);
         Serial.println(mqttClient->state());
@@ -82,7 +73,7 @@ void MqttClientWrapper::callBack(char *topic, byte *payload, int len) {
     Serial.println(topicPath.c_str());
 
 
-    DynamicJsonDocument doc(512);
+    DynamicJsonDocument doc(1024);
     deserializeJson(doc, data);
     int size = mqttInstance->subscriptionTopicCallback.size();
     for (int i = 0; i < size; ++i) {
@@ -91,6 +82,11 @@ void MqttClientWrapper::callBack(char *topic, byte *payload, int len) {
             Serial.print("Notifying subscriber with prefix ");
             Serial.println(interestedTopic == nullptr ? "NULL_PTR" : interestedTopic);
             mqttInstance->subscriptionTopicCallback[i](topicPath.data(), &doc, data);
+        }else{
+            Serial.print("Current message with topic ");
+            Serial.print(topicPath.c_str());
+            Serial.print(" is not relevant for ");
+            Serial.println(mqttInstance->subscriptionTopicPrefix[i]);
         }
     }
 

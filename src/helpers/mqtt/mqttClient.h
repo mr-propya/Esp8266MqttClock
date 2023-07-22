@@ -1,7 +1,6 @@
 //
 // Created by Tamse, Mahesh on 16/04/23.
 //
-//https://github.com/marvinroger/async-mqtt-client
 #ifndef CUSTOMCLOCKNEW_MQTTCLIENT_H
 #define CUSTOMCLOCKNEW_MQTTCLIENT_H
 
@@ -15,14 +14,12 @@
 #include <Arduino.h>
 #include <cstdlib>
 #include <CertStoreBearSSL.h>
-#include "ESP8266WiFi.h"
 
 
 class MqttClientWrapper{
 
 private:
-    BearSSL::WiFiClientSecure bear;
-    WiFiClient baseClient;
+    BearSSL::WiFiClientSecure wiFiClientSecure;
     char *deviceId;
     PubSubClient *mqttClient;
     std::vector<char*> subscriptionTopicPrefix;

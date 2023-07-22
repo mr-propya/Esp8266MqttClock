@@ -7,6 +7,7 @@
 #include "helpers/smartHome/AlexaWrapper.h"
 #include "helpers/clock/clockWrapper.h"
 #include "helpers/led_control/ledControlWrapper.h"
+#include "helpers/message_flasher/CustomMessageDisplay.h"
 //#include "helpers/led_control/ColorPaletteHelper.h"
 #include <WiFiUdp.h>
 #include <stack>
@@ -44,6 +45,7 @@ LEDWrapper *ledWrapper;
 MqttClientWrapper* mqttClientWrapper;
 AlexaWrapper* alexaWrapper;
 GradientHelper* gradientHelper;
+CustomMessageDisplay* customMessageDisplay;
 
 
 int brightness = 128;
@@ -123,11 +125,12 @@ void initializeWifi(){
 void initialize(){
     Serial.println(ESP.getFreeHeap());
 //    MQTT should always be initialized first bcoz there might be dependencies on it for below wrappers
-//    clockWrapper = ClockWrapper::getClockWrapperInstance();
+    clockWrapper = ClockWrapper::getClockWrapperInstance();
     mqttClientWrapper = MqttClientWrapper::getMqttInstance();
-//    ledWrapper = LEDWrapper::getLedWrapperInstance();
-//    alexaWrapper = AlexaWrapper::getAlexaWrapperInstance();
-//    gradientHelper = GradientHelper::getGradientHelperInstance();
+    ledWrapper = LEDWrapper::getLedWrapperInstance();
+    alexaWrapper = AlexaWrapper::getAlexaWrapperInstance();
+    gradientHelper = GradientHelper::getGradientHelperInstance();
+    customMessageDisplay = CustomMessageDisplay::getCustomMessageInstance();
 }
 
 void setup() {
@@ -138,7 +141,7 @@ void setup() {
     
     delay(1000);
     initialize();
-//    ledWrapper->shouldBlink(true);
+    ledWrapper->shouldBlink(true);
 }
 
 bool RESTART_FLAG_GLOBAL = false;
@@ -154,22 +157,33 @@ bool needRestart(int time){
 void restartController(){
     ESP.restart();
 }
-
+long heapAvail = -1;
 void loop(){
-//    mqttClientWrapper->poll();
-//    int time = clockWrapper->getTime();
-//    ledWrapper->setTime(time);
-//    alexaWrapper->loop();
-//    storageWrapper->loop();
-//    ledWrapper->loop();
-//    gradientHelper-> loop();
-//    if(needRestart(time) && storageWrapper->isSafeToRestart()){
-//        restartController();
-//    }
-//    if(DEBUG_ENABLED){
-//        ledWrapper->printStat();
-//        storageWrapper->printState();
-//    }
-    Serial.println(ESP.getFreeHeap());
+    while (customMessageDisplay->hasMessage()){
+        CustomMessage* msg = customMessageDisplay->getTop();
+        if(msg == nullptr){
+            break;
+        }
+        Serial.print(msg->brightness);
+        msg->loop();
+    }
+    mqttClientWrapper->poll();
+    int time = clockWrapper->getTime();
+    ledWrapper->setTime(time);
+    alexaWrapper->loop();
+    storageWrapper->loop();
+    ledWrapper->loop();
+    gradientHelper-> loop();
+    if(needRestart(time) && storageWrapper->isSafeToRestart()){
+        restartController();
+    }
+    if(DEBUG_ENABLED){
+        ledWrapper->printStat();
+        storageWrapper->printState();
+    }
+    if(heapAvail != ESP.getFreeHeap()){
+        mqttClientWrapper->publish(HEAP_UTILIZATION_DATA_MQTT_TOPIC, std::to_string(ESP.getFreeHeap()).data(), false);
+        heapAvail = ESP.getFreeHeap();
+    }
 }
 

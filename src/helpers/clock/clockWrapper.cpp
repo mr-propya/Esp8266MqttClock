@@ -12,7 +12,7 @@
 #include <../.pio/libdeps/nodemcuv2/ArduinoJson/src/ArduinoJson.h>
 
 
-#define CLOCK_CONTROL_MQTT_CMD "clock/cmd/"
+#define CLOCK_CONTROL_MQTT_CMD "cmd/clock/"
 
 void ClockWrapper::setTimeFormat(int amPm) {
     if(amPm == 12){
