@@ -6,11 +6,15 @@
 #define CUSTOMCLOCKNEW_CUSTOMMESSAGEDISPLAY_H
 
 #include <queue>
-#include "../../../.pio/libdeps/nodemcuv2/ArduinoJson/src/ArduinoJson.h"
 #include "../mqtt/mqttClient.h"
 #include "./CustomMessage.h"
 #include "../led_control/ColorManager.h"
 
+#if defined (ARDUINO_ARCH_ESP8266)
+#include <../.pio/libdeps/nodemcuv2/ArduinoJson/src/ArduinoJson.h>
+#elif defined(ESP32)
+#include <../.pio/libdeps/esp32/ArduinoJson/src/ArduinoJson.h>
+#endif
 
 class CustomMessageDisplay {
 private:

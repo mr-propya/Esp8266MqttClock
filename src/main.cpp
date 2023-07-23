@@ -21,7 +21,6 @@
 #define WIFI_SETUP_SSID "NodeMCU-Setup"
 #define WIFI_SETUP_PASSWORD "testSetup"
 
-#define HTTP_POLL_BASE_URL "https://us-central1-customwatch-f5c4a.cloudfunctions.net/getData"
 
 WiFiManager wifiManager;
 
@@ -103,14 +102,9 @@ void initializeWifi(){
     while(!wifiManager.autoConnect(WIFI_SETUP_SSID, WIFI_SETUP_PASSWORD)){
         delay(5000);
     }
-    Serial.print("Wifi internal");
-    Serial.print(WiFiClient().localIP().toString());
-    Serial.println(WiFiClient().connected());
 }
 
 void initialize(){
-    Serial.println(ESP.getFreeHeap());
-//    MQTT should always be initialized first bcoz there might be dependencies on it for below wrappers
     clockWrapper = ClockWrapper::getClockWrapperInstance();
     mqttClientWrapper = MqttClientWrapper::getMqttInstance();
     ledWrapper = LEDWrapper::getLedWrapperInstance();
@@ -125,7 +119,6 @@ void setup() {
     Serial.print("Reading");
     storageWrapper = StorageWrapper::getStorageWrapper();
     initializeWifi();
-    
     delay(1000);
     initialize();
     ledWrapper->shouldBlink(true);

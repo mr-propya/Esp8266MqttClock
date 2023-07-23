@@ -81,7 +81,7 @@ void MqttClientWrapper::callBack(char *topic, byte *payload, int len) {
         if(interestedTopic == nullptr || strlen(interestedTopic)==0 || topicPath.rfind(interestedTopic) == 0){
             Serial.print("Notifying subscriber with prefix ");
             Serial.println(interestedTopic == nullptr ? "NULL_PTR" : interestedTopic);
-            mqttInstance->subscriptionTopicCallback[i](topicPath.data(), &doc, data);
+            mqttInstance->subscriptionTopicCallback[i]((char*)topicPath.data(), &doc, data);
         }else{
             Serial.print("Current message with topic ");
             Serial.print(topicPath.c_str());
@@ -127,5 +127,9 @@ void MqttClientWrapper::publish(char *subTopic, char *payload, bool persist) {
         connectToServer();
     }
     mqttClient->publish(topic.c_str(), payload, persist);
+}
+
+void MqttClientWrapper::publish(char *topic, const char *payload, bool persist) {
+    publish(topic, (char *)payload, persist);
 }
 
