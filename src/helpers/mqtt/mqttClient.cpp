@@ -3,18 +3,7 @@
 //
 
 #include "mqttClient.h"
-#include <string.h>
-#include <Arduino.h>
-#include <../.pio/libdeps/nodemcuv2/PubSubClient/src/PubSubClient.h>
-#include <cstdlib>
-#include <ESP8266WiFi.h>
-#include "vector"
-#include <helpers/storage/storageWrapper.h>
 
-#include <CertStoreBearSSL.h>
-#include <string>
-#include "constants.h"
-#include "../../../.pio/libdeps/nodemcuv2/ArduinoJson/src/ArduinoJson.h"
 
 MqttClientWrapper* mqttInstance = nullptr;
 
@@ -24,11 +13,8 @@ MqttClientWrapper::MqttClientWrapper(char *id) {
     deviceId = (char*) malloc(sizeof(char) * (len+1));
     strcpy(deviceId, id);
     deviceId[len] = '\0';
-
-    BearSSL::WiFiClientSecure *bear = new BearSSL::WiFiClientSecure();
-    bear->setInsecure();
-
-    mqttClient = new PubSubClient(*bear);
+    wiFiClientSecure.setInsecure();
+    mqttClient = new PubSubClient(wiFiClientSecure);
     mqttClient->setServer(MQTT_SERVER_HOST, MQTT_SERVER_PORT);
     mqttClient->setCallback(callBack);
     mqttClient->setKeepAlive(GLOBAL_MAX_LOOP_TIMEOUT);
@@ -37,9 +23,13 @@ MqttClientWrapper::MqttClientWrapper(char *id) {
 
 bool MqttClientWrapper::connectToServer() {
     int tryCounter = 0;
+
     while (tryCounter <= MQTT_SERVER_CONNECT_RETRY && !mqttClient->connected()){
         tryCounter+=1;
+        Serial.println("Wifi state ");
+        Serial.println(WiFiClient().connected());
         Serial.println("Trying to connect to MQTT server");
+        Serial.println("Wifi state before");
         int response = mqttClient->connect(deviceId,MQTT_SERVER_USER, MQTT_SERVER_PASSWORD);
         Serial.print("MQTT server current response code");
         Serial.println(response);
@@ -49,8 +39,7 @@ bool MqttClientWrapper::connectToServer() {
             String subTopic;
             subTopic.concat(deviceId);
             subTopic.concat("/");
-            subTopic.concat(LED_CONTROL_MQTT_CMD);
-            subTopic.concat("#");
+            subTopic.concat(MQTT_SUBSCRIPTION);
             Serial.print("Subscribing to MQTT topic: ");
             Serial.println(subTopic.c_str());
             Serial.println(subTopic.c_str());
@@ -84,7 +73,7 @@ void MqttClientWrapper::callBack(char *topic, byte *payload, int len) {
     Serial.println(topicPath.c_str());
 
 
-    DynamicJsonDocument doc(512);
+    DynamicJsonDocument doc(1024);
     deserializeJson(doc, data);
     int size = mqttInstance->subscriptionTopicCallback.size();
     for (int i = 0; i < size; ++i) {
@@ -92,7 +81,12 @@ void MqttClientWrapper::callBack(char *topic, byte *payload, int len) {
         if(interestedTopic == nullptr || strlen(interestedTopic)==0 || topicPath.rfind(interestedTopic) == 0){
             Serial.print("Notifying subscriber with prefix ");
             Serial.println(interestedTopic == nullptr ? "NULL_PTR" : interestedTopic);
-            mqttInstance->subscriptionTopicCallback[i](topicPath.data(), &doc, data);
+            mqttInstance->subscriptionTopicCallback[i]((char*)topicPath.data(), &doc, data);
+        }else{
+            Serial.print("Current message with topic ");
+            Serial.print(topicPath.c_str());
+            Serial.print(" is not relevant for ");
+            Serial.println(mqttInstance->subscriptionTopicPrefix[i]);
         }
     }
 
@@ -133,5 +127,9 @@ void MqttClientWrapper::publish(char *subTopic, char *payload, bool persist) {
         connectToServer();
     }
     mqttClient->publish(topic.c_str(), payload, persist);
+}
+
+void MqttClientWrapper::publish(char *topic, const char *payload, bool persist) {
+    publish(topic, (char *)payload, persist);
 }
 

@@ -1,0 +1,13 @@
+{
+  "color_mode": "palette_shuffle",
+  "paletteIndex": [ 1, 2, 3 ],
+  "brightness": 255,
+  "scrollData": 0,
+  "dataString": [
+    "MAP:NULL", "MAP:H", "MAP:I", "MAP:NULL"
+  ],
+  "dataLen": "WILL_BE_FILLED_BY_BACKEND",
+  "time": 30,
+  "blinkAfter": 2,
+  "blinkFor": 1
+}

@@ -8,12 +8,20 @@
 #include "constants.h"
 #include "./ColorManager.h"
 #include "../clock/clockWrapper.h"
-#include "../.pio/libdeps/nodemcuv2/FastLED/src/FastLED.h"
 #include <stack>
-#include <../.pio/libdeps/nodemcuv2/ArduinoJson/src/ArduinoJson.h>
 #include "helpers/mqtt/mqttClient.h"
 #include "ColorPaletteHelper.h"
 #include <string>
+
+
+
+#if defined (ARDUINO_ARCH_ESP8266)
+#include "../.pio/libdeps/nodemcuv2/FastLED/src/FastLED.h"
+#include <../.pio/libdeps/nodemcuv2/ArduinoJson/src/ArduinoJson.h>
+#elif defined(ESP32)
+#include "../.pio/libdeps/esp32/FastLED/src/FastLED.h"
+#include <../.pio/libdeps/esp32/ArduinoJson/src/ArduinoJson.h>
+#endif
 
 
 /*
@@ -40,7 +48,6 @@ private:
     bool blinkState;
     void updateBulk(int start, int len, bool state);
     void blinkDots();
-    void update();
     bool updateUsingJson(DynamicJsonDocument *doc);
     static void mqttCallBack(char* topic, DynamicJsonDocument *doc, char* data);
     LEDWrapper();
@@ -55,6 +62,7 @@ public:
     void setNumber(int digit, int number);
     void setDotSegment(int segment, bool isOn);
     void setTime(int time);
+    void update();
     void loop();
     void shouldBlink(bool blinkingEnabled);
     void printStat();
