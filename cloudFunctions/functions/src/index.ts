@@ -1,7 +1,7 @@
 import * as functions from "firebase-functions";
 import {database} from "firebase-admin";
 import {initializeApp} from "firebase-admin/app";
-
+import {getPreparedTemplate} from "./payloadResolver"
 initializeApp();
 
 //copyTemplate
@@ -70,3 +70,24 @@ export const getData = functions.https.onRequest(async (request, response) => {
     }
   }
 });
+
+export const getTemplate = functions.https.onRequest(async (request, response)=>{
+  const context = {
+    ...request.query,
+    ...request.body
+  }
+  try {
+    response.send({
+      "status":"success",
+      "payload": await getPreparedTemplate(context["templateName"], context)
+    })
+  }catch (e){
+    response.statusCode = 500
+    response.send({
+      "status":"error",
+      "error": JSON.stringify(e)
+    })
+  }
+
+
+})
