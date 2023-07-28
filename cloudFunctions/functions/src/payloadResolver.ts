@@ -79,6 +79,7 @@ const resolvers : Array<PayloadResolver> = [
 ]
 
 const resolveString = async (content: string, context: Map<string, any>, visitedPattens: Set<string>) : Promise<string> =>{
+    content = String(content)
     for (let resolver of resolvers) {
         console.log(resolver.resolverRegexPattern())
         const matches = content.matchAll(new RegExp(resolver.resolverRegexPattern(),"g"))
