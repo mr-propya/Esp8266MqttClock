@@ -4,7 +4,7 @@
   "brightness": ${MAP_ARG_IF_NULL:BRIGHTNESS?128},
   "scrollData": 0,
   "dataString": [
-    ${MAP_TEMPLATE:NULL}, MAP_TEMPLATE:H, MAP_TEMPLATE:I, MAP_TEMPLATE:NULL
+    ${MAP:static_replacements_chars/0}, MAP_TEMPLATE:H, MAP_TEMPLATE:I, MAP_TEMPLATE:NULL
   ],
   "time": 30,
   ${MAP_TEMPLATE:static_replacements/blink/uniform_blink}

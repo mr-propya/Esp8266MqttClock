@@ -79,7 +79,7 @@ export const getTemplate = functions.https.onRequest(async (request, response)=>
   try {
     response.send({
       "status":"success",
-      "payload": await getPreparedTemplate(context["templateName"], context)
+      "payload": JSON.stringify(await getPreparedTemplate(context["templateName"], context))
     })
   }catch (e){
     response.statusCode = 500

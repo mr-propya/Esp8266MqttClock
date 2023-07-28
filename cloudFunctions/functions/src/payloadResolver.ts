@@ -8,19 +8,16 @@ interface PayloadResolver{
 }
 
 const BASE_REGEX_TEMPLATE = (prefix: string)=>{
-    return `/g\\$\\{${prefix}:([^\\s\\"\\}]+)\\}`
+    return `\\$\\{${prefix}:([^\\s\\"\\}]+)\\}`
 }
 const getResolverData = (matchedGroup: string)=>{
     return matchedGroup.split(":", 2)[1].replace("}","")
 }
 
-const loadGitFile = (fileName: string)=> {
+const loadGitFile = async (fileName: string) : Promise<string> => {
     const url = `${BASE_GITHUB_URL}${fileName}`
-    return axios.get(url).then(response => {
-        const data = JSON.stringify(response.data)
-        console.log(data)
-        return data
-    });
+    const response = await axios.get(url);
+    return response.data
 }
 
 
@@ -41,8 +38,10 @@ class ArgIfNotNull implements PayloadResolver{
 class StaticTemplateResolvers implements PayloadResolver{
     // MAP_TEMPLATE:static_replacements/blink/uniform_blink
     resolveParam(att: string, contentMap: Map<String, any>):  Promise<string> {
+        console.log(att)
         const templateName = getResolverData(att);
-        return loadGitFile(templateName);
+        console.log(`Resolved static replacement template with name ${templateName}`)
+        return loadGitFile(`${templateName}.template`);
     }
 
     resolverRegexPattern(): string {
@@ -75,28 +74,37 @@ const resolvers : Array<PayloadResolver> = [
 
 const resolveString = async (content: string, context: Map<string, any>, visitedPattens: Set<string>) : Promise<string> =>{
     for (let resolver of resolvers) {
-        const matches = content.matchAll(new RegExp(resolver.resolverRegexPattern()))
+        console.log(resolver.resolverRegexPattern())
+        const matches = content.matchAll(new RegExp(resolver.resolverRegexPattern(),"g"))
         if(matches==null){
             console.log("No match found for ", resolver.resolverRegexPattern())
             continue
+        }else {
+            while (true){
+                const nextIterator = matches.next()
+                if(nextIterator.done || nextIterator.value == null)
+                    break
+                const s = nextIterator.value[0]
+                console.log("Found match as ", s)
+                if (visitedPattens.has(s))
+                    throw new Error(`Template has recursive pattern: ${s}`)
+
+                let finalReplacement = await resolver.resolveParam(s, context)
+                visitedPattens.add(s)
+                finalReplacement = await resolveString(finalReplacement, context, visitedPattens)
+                visitedPattens.delete(s)
+                content = content.replace(s, finalReplacement)
+            }
+            console.log("Have matches", matches.next())
         }
 
-        for (let s in matches) {
-            console.log("Found match as ", s)
-            if (visitedPattens.has(s))
-                throw new Error(`Template has recursive pattern: ${s}`)
-
-            let finalReplacement = await resolver.resolveParam(s, context)
-            visitedPattens.add(s)
-            finalReplacement = await resolveString(finalReplacement, context, visitedPattens)
-            visitedPattens.delete(s)
-            content = content.replace(s, finalReplacement)
-        }
     }
     return content
 }
 
-export const getPreparedTemplate = async (templateName: string, context: Map<string, any>) : Promise<string>  =>{
+export const getPreparedTemplate = async (templateName: string, context: Map<string, any>) : Promise<any>  =>{
     const templateText = await loadGitFile(`templates/${templateName}.template`)
+    console.log("Template text is ")
+    console.log(templateText)
     return resolveString(templateText, context, new Set())
 }

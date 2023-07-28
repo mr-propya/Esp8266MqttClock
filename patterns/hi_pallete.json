@@ -4,7 +4,7 @@
   "brightness": 255,
   "scrollData": 0,
   "dataString": [
-    "MAP:NULL", "MAP:H", "MAP:I", "MAP:NULL"
+    "MAP:static_replacements_chars/0", "MAP:H", "MAP:I", "MAP:NULL"
   ],
   "dataLen": "WILL_BE_FILLED_BY_BACKEND",
   "time": 30,
