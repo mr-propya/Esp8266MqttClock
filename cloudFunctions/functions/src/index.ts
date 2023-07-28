@@ -2,6 +2,8 @@ import * as functions from "firebase-functions";
 import {database} from "firebase-admin";
 import {initializeApp} from "firebase-admin/app";
 import {getPreparedTemplate} from "./payloadResolver"
+import {publishMqtt} from "./mqtt_helper";
+
 initializeApp();
 
 //copyTemplate
@@ -88,4 +90,18 @@ export const getTemplate = functions.https.onRequest(async (request, response)=>
       "error": JSON.stringify(e)
     })
   }
+})
+
+export const publishTemplate = functions.https.onRequest(async (request, response)=>{
+  const context = {
+    ...request.query,
+    ...request.body
+  }
+  const rawResult = await getPreparedTemplate(context["templateName"], context)
+
+  const jsonResult = JSON.parse(rawResult)
+  const topic = jsonResult["topic"]
+  delete jsonResult["topic"]
+  publishMqtt(topic, JSON.stringify(jsonResult)).then(response.send)
+
 })

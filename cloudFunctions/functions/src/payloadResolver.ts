@@ -61,7 +61,7 @@ class CharacterToBinaryResolver implements PayloadResolver{
         const digitsOn = getResolverData(att).split(",").map(Number)
         let binaryValue = 0;
         for (let number of digitsOn) {
-            binaryValue += 1<<number
+            binaryValue += 1<<(number-1)
         }
         return Promise.resolve(String(binaryValue));
     }
@@ -114,5 +114,9 @@ export const getPreparedTemplate = async (templateName: string, context: Map<str
     console.log("Template text is ")
     console.log(templateText)
     const response = await resolveString(templateText, context, new Set())
-    return JSON.stringify(JSON.parse(response))
+    try {
+        return JSON.stringify(JSON.parse(response))
+    }catch (e){
+        return response
+    }
 }
