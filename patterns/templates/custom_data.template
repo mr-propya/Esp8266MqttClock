@@ -6,6 +6,6 @@
   "dataString": [
        ${MAP_ARG_IF_NULL:CUSTOM_DATA_PARAM?0}
   ],
-  "time": 30,
+  "time": ${MAP_ARG_IF_NULL:DISPLAY_TIME?30},
   ${MAP_TEMPLATE:static_replacements/blink/uniform_blink}
 }
