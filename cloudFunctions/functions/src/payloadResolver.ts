@@ -8,7 +8,7 @@ interface PayloadResolver{
 }
 
 const BASE_REGEX_TEMPLATE = (prefix: string)=>{
-    return `\$\{${prefix}:([^\s\"\}]+)\}`
+    return `/g\\$\\{${prefix}:([^\\s\\"\\}]+)\\}`
 }
 const getResolverData = (matchedGroup: string)=>{
     return matchedGroup.split(":", 2)[1].replace("}","")
@@ -16,7 +16,11 @@ const getResolverData = (matchedGroup: string)=>{
 
 const loadGitFile = (fileName: string)=> {
     const url = `${BASE_GITHUB_URL}${fileName}`
-    return axios.get(url).then(response => JSON.stringify(response.data));
+    return axios.get(url).then(response => {
+        const data = JSON.stringify(response.data)
+        console.log(data)
+        return data
+    });
 }
 
 
@@ -64,18 +68,21 @@ class CharacterToBinaryResolver implements PayloadResolver{
 }
 
 const resolvers : Array<PayloadResolver> = [
+    new StaticTemplateResolvers(),
     new CharacterToBinaryResolver(),
-    new ArgIfNotNull(),
-    new StaticTemplateResolvers()
+    new ArgIfNotNull()
 ]
 
 const resolveString = async (content: string, context: Map<string, any>, visitedPattens: Set<string>) : Promise<string> =>{
     for (let resolver of resolvers) {
-        const matches: null|RegExpMatchArray = new RegExp(resolver.resolverRegexPattern()).exec(content);
-        if(matches==null)
+        const matches = content.matchAll(new RegExp(resolver.resolverRegexPattern()))
+        if(matches==null){
+            console.log("No match found for ", resolver.resolverRegexPattern())
             continue
+        }
 
         for (let s in matches) {
+            console.log("Found match as ", s)
             if (visitedPattens.has(s))
                 throw new Error(`Template has recursive pattern: ${s}`)
 
