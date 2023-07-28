@@ -15,8 +15,13 @@ const getResolverData = (matchedGroup: string)=>{
 }
 
 const loadGitFile = async (fileName: string) : Promise<string> => {
+    console.log(`Loading git file ${fileName}`)
     const url = `${BASE_GITHUB_URL}${fileName}`
     const response = await axios.get(url);
+    if(response.status == 404){
+        return ""
+    }
+    console.log(`Got git file as ${response.data}`)
     return response.data
 }
 
@@ -25,7 +30,8 @@ class ArgIfNotNull implements PayloadResolver{
     // MAP_ARG_IF_NULL:BRIGHTNESS?128
     resolveParam(att: string, contentMap: Map<String, any>): Promise<string> {
         const [key, defaultVal] = getResolverData(att).split("?", 2)
-        if (Object.keys(contentMap).includes(key)){
+        console.log(`Checking if exists key ${key}`, contentMap)
+        if (contentMap.has(key)){
             return Promise.resolve(contentMap.get(key))
         }
         return Promise.resolve(defaultVal);

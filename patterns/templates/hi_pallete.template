@@ -1,9 +1,10 @@
 {
-  "topic": "${MAP_ARG:DEVICE_ID}/cmd/customMsg/json",
+  "topic": "${MAP_ARG_IF_NULL:DEVICE_ID?ERROR}/cmd/customMsg/json",
   ${MAP_TEMPLATE:static_replacements/color/pallete_blue_pink_gradient}
   "brightness": ${MAP_ARG_IF_NULL:BRIGHTNESS?128},
   "scrollData": 0,
   "dataString": [
+    ${MAP_TEMPLATE:static_replacements/chars/H} , ${MAP_TEMPLATE:static_replacements/chars/0} ,${MAP_TEMPLATE:static_replacements/chars/1}, ${MAP_TEMPLATE:static_replacements/chars/2}
   ],
   "time": 30,
   ${MAP_TEMPLATE:static_replacements/blink/uniform_blink}
