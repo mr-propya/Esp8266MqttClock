@@ -109,9 +109,10 @@ const resolveString = async (content: string, context: Map<string, any>, visited
     return content
 }
 
-export const getPreparedTemplate = async (templateName: string, context: Map<string, any>) : Promise<any>  =>{
+export const getPreparedTemplate = async (templateName: string, context: Map<string, any>) : Promise<string>  =>{
     const templateText = await loadGitFile(`templates/${templateName}.template`)
     console.log("Template text is ")
     console.log(templateText)
-    return resolveString(templateText, context, new Set())
+    const response = await resolveString(templateText, context, new Set())
+    return JSON.stringify(JSON.parse(response))
 }

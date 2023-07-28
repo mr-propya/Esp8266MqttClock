@@ -1,0 +1,11 @@
+{
+  "topic": "${MAP_ARG_IF_NULL:DEVICE_ID?ERROR}/cmd/customMsg/json",
+  ${MAP_TEMPLATE:static_replacements/color/pallete_blue_pink_gradient}
+  "brightness": ${MAP_ARG_IF_NULL:BRIGHTNESS?128},
+  "scrollData": 0,
+  "dataString": [
+       ${MAP_ARG_IF_NULL:CUSTOM_DATA_PARAM?0}
+  ],
+  "time": 30,
+  ${MAP_TEMPLATE:static_replacements/blink/uniform_blink}
+}
