@@ -8,7 +8,7 @@ const clientId = `mqtt_server_${Date().toString()}`
 const connectUrl = `${protocol}://${host}:${port}`
 
 
-export const publxishMqtt = async (topic: string, payload: string) : Promise<any> =>{
+export const publishMqtt = async (topic: string, payload: string) : Promise<any> =>{
     return new Promise((resolve, reject)=>{
         const client = mqtt.connect(connectUrl, {
             clientId,
