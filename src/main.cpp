@@ -9,6 +9,7 @@
 #include "helpers/led_control/ledControlWrapper.h"
 #include "helpers/message_flasher/CustomMessageDisplay.h"
 #include "helpers/led_control/ColorManager.h"
+#include "helpers/healthMonitor/healthMonitorHelper.h"
 
 #if defined (ARDUINO_ARCH_ESP8266)
 #include "../.pio/libdeps/nodemcuv2/WiFiManager/WiFiManager.h"
@@ -32,6 +33,7 @@ AlexaWrapper* alexaWrapper;
 GradientHelper* gradientHelper;
 CustomMessageDisplay* customMessageDisplay;
 ColorManager* colorManager;
+HealthMonitor* healthMonitor;
 
 int brightness = 128;
 
@@ -112,6 +114,7 @@ void initialize(){
     gradientHelper = GradientHelper::getGradientHelperInstance();
     customMessageDisplay = CustomMessageDisplay::getCustomMessageInstance();
     colorManager = ColorManager::getColorManagerInstance();
+    healthMonitor = HealthMonitor::getHealthMonitorInstance();
 }
 
 void setup() {
@@ -137,10 +140,17 @@ bool needRestart(int time){
 void restartController(){
     ESP.restart();
 }
+
+
+bool isSafeToRestart(){
+    return storageWrapper->isSafeToRestart();
+}
+
 long heapAvail = -1;
 void loop(){
     mqttClientWrapper->poll();
     colorManager->loop();
+    healthMonitor->loop(isSafeToRestart());
     if (customMessageDisplay->hasMessage()){
         CustomMessage* msg = customMessageDisplay->getTop();
         if(msg != nullptr){
@@ -153,13 +163,9 @@ void loop(){
         storageWrapper->loop();
         ledWrapper->loop();
         gradientHelper->loop();
-        if (needRestart(time) && storageWrapper->isSafeToRestart()) {
+        if (needRestart(time) && isSafeToRestart()) {
             restartController();
         }
-    }
-    if(heapAvail != ESP.getFreeHeap()){
-        mqttClientWrapper->publish(HEAP_UTILIZATION_DATA_MQTT_TOPIC, std::to_string(ESP.getFreeHeap()).data(), false);
-        heapAvail = ESP.getFreeHeap();
     }
 }
 

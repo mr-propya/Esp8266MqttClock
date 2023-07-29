@@ -13,7 +13,11 @@ MqttClientWrapper::MqttClientWrapper(char *id) {
     deviceId = (char*) malloc(sizeof(char) * (len+1));
     strcpy(deviceId, id);
     deviceId[len] = '\0';
+#if defined (ARDUINO_ARCH_ESP8266)
     wiFiClientSecure.setInsecure();
+#elif defined(ESP32)
+    wiFiClientSecure.setCACert(root_ca);
+#endif
     mqttClient = new PubSubClient(wiFiClientSecure);
     mqttClient->setServer(MQTT_SERVER_HOST, MQTT_SERVER_PORT);
     mqttClient->setCallback(callBack);
